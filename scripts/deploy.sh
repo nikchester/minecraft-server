@@ -194,6 +194,10 @@ run_deploy() {
     readlink -f "$MINECRAFT_CURRENT_DIR" | xargs -r basename >"$MINECRAFT_STATE_DIR/previous-release"
     switch_current "$target"
   fi
+  # Seed DiscordSRV's complete embedded defaults and heal its project-specific
+  # settings while the server is stopped, before its first plugin load. This
+  # also avoids editing its persistent config files while players are online.
+  DISCORDSRV_BOOTSTRAP_DEFAULTS=true "$SCRIPT_DIR/ensure-discordsrv-config.sh"
   if verify_release; then
     if [[ -f "$MINECRAFT_STATE_DIR/target-release" ]]; then
       # Pruning runs before current-release is written: if it fails (e.g.

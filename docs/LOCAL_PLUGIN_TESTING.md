@@ -160,7 +160,10 @@ DiscordSRV (`1.30.5`, pinned the same way as every other plugin) is now in
 `scripts/deploy.sh`'s `run_deploy`) forces all of the following into
 `plugins/DiscordSRV/config.yml`/`voice.yml` on every deploy cycle, so a
 plugin update or a hand-edit reverting any of them to their generated
-defaults gets corrected on the next tick:
+defaults gets corrected on the next tick. On first install, deploy extracts
+the complete default files from the selected plugin JAR while Minecraft is
+stopped, applies these settings, then starts the server; existing shared
+configs are never replaced:
 
 - `BotToken`, rendered from the `DISCORD_BOT_TOKEN` secret (`docs/SECRETS.md`)
   the same way `.github/workflows/deploy.yml` already renders

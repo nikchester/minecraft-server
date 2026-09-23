@@ -14,7 +14,7 @@ Secrets are not committed to Git. Values are added manually by the owner to GitH
 | `YANDEX_RCLONE_CONFIG` | production environment | rclone config content for Yandex Disk remote. |
 | `TELEGRAM_BOT_TOKEN` | production environment | Telegram bot token for alerts. |
 | `TELEGRAM_CHAT_ID` | production environment | Telegram chat ID for owner alerts. |
-| `DISCORD_BOT_TOKEN` | production environment | DiscordSRV bot token, rendered into `plugins/DiscordSRV/config.yml`'s `BotToken` on every deploy cycle (issue #20, not yet in `minecraft/versions.yml`). |
+| `DISCORD_BOT_TOKEN` | production environment | DiscordSRV bot token, rendered into `plugins/DiscordSRV/config.yml`'s `BotToken` on every deploy cycle (issue #20); the config is restricted to the Minecraft service account. |
 | `HEALTHCHECKS_VPS_URL` | production environment | Healthchecks.io heartbeat URL for VPS liveness. |
 | `HEALTHCHECKS_BACKUP_URL` | production environment | Healthchecks.io job URL for backup monitoring. |
 

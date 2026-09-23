@@ -8,6 +8,7 @@ source "$SCRIPT_DIR/lib.sh"
 DISCORDSRV_CONFIG=${DISCORDSRV_CONFIG:-$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/config.yml}
 DISCORDSRV_VOICE_CONFIG=${DISCORDSRV_VOICE_CONFIG:-$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/voice.yml}
 DISCORD_BOT_TOKEN_FILE=${DISCORD_BOT_TOKEN_FILE:-/etc/minecraft/secrets/discord_bot_token}
+DISCORDSRV_BOOTSTRAP_DEFAULTS=${DISCORDSRV_BOOTSTRAP_DEFAULTS:-false}
 
 # The project's one real Discord server -- the same IDs
 # test/paper-local/entrypoint.sh seeds locally (see
@@ -17,6 +18,58 @@ DISCORD_BOT_TOKEN_FILE=${DISCORD_BOT_TOKEN_FILE:-/etc/minecraft/secrets/discord_
 DISCORD_CHANNEL_ID="1551597801933242418"
 DISCORD_VOICE_CATEGORY_ID="1551598654245310494"
 DISCORD_LOBBY_CHANNEL_ID="1551598909024112726"
+
+# On the first install DiscordSRV has not created its persistent config
+# directory yet. Seed both complete defaults from the freshly selected plugin
+# jar before the server starts, then the normal self-heal functions below can
+# set the project-specific values. Only run this after minecraft.service has
+# stopped; never replace existing files or edit them from a live deploy tick.
+bootstrap_discordsrv_defaults() {
+  [[ "$DISCORDSRV_BOOTSTRAP_DEFAULTS" == "true" ]] || return 0
+
+  local plugin_jar
+  plugin_jar=$(find "$MINECRAFT_CURRENT_DIR/plugins" -maxdepth 1 -type f -name 'discordsrv-*.jar' -print -quit 2>/dev/null || true)
+  if [[ -z "$plugin_jar" ]]; then
+    log "DiscordSRV jar not present in current release; skipping config bootstrap"
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$DISCORDSRV_CONFIG")" "$(dirname "$DISCORDSRV_VOICE_CONFIG")"
+  python3 - "$plugin_jar" "$DISCORDSRV_CONFIG" "$DISCORDSRV_VOICE_CONFIG" <<'PY'
+import os
+import grp
+import pwd
+import sys
+import tempfile
+import zipfile
+
+jar, config_path, voice_path = sys.argv[1:]
+targets = {"config.yml": config_path, "voice.yml": voice_path}
+with zipfile.ZipFile(jar) as archive:
+    for name, target in targets.items():
+        if os.path.exists(target):
+            continue
+        try:
+            contents = archive.read(name)
+        except KeyError:
+            raise SystemExit(f"DiscordSRV jar is missing its embedded {name}")
+        fd, temporary = tempfile.mkstemp(prefix=f".{name}.", dir=os.path.dirname(target))
+        try:
+            with os.fdopen(fd, "wb") as output:
+                output.write(contents)
+            os.chmod(temporary, 0o644)
+            try:
+                # Do not replace a config created concurrently or preserved
+                # from an earlier run.
+                os.link(temporary, target)
+                os.chown(target, pwd.getpwnam("minecraft").pw_uid, grp.getgrnam("minecraft").gr_gid)
+            except FileExistsError:
+                pass
+        finally:
+            os.unlink(temporary)
+PY
+  log "seeded missing DiscordSRV config files from $(basename "$plugin_jar")"
+}
 
 # DiscordSRV writes its own config.yml on first run with a literal
 # BotToken: "BOTTOKEN" placeholder (see minecraft/plugins/README.md); the
@@ -92,6 +145,22 @@ ensure_discordsrv_voice() {
   fi
 }
 
+secure_discordsrv_configs() {
+  local minecraft_uid minecraft_gid
+  minecraft_uid=$(id -u minecraft)
+  minecraft_gid=$(id -g minecraft)
+  if [[ -f "$DISCORDSRV_CONFIG" ]]; then
+    chown "$minecraft_uid:$minecraft_gid" "$DISCORDSRV_CONFIG"
+    chmod 0600 "$DISCORDSRV_CONFIG"
+  fi
+  if [[ -f "$DISCORDSRV_VOICE_CONFIG" ]]; then
+    chown "$minecraft_uid:$minecraft_gid" "$DISCORDSRV_VOICE_CONFIG"
+    chmod 0644 "$DISCORDSRV_VOICE_CONFIG"
+  fi
+}
+
+bootstrap_discordsrv_defaults
 ensure_discordsrv_token
 ensure_discordsrv_channels
 ensure_discordsrv_voice
+secure_discordsrv_configs
