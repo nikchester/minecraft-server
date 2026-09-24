@@ -1,0 +1,32 @@
+name: Cancel production deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type CANCEL_DEPLOYMENT to stop the active deployment and timer
+        required: true
+
+jobs:
+  cancel-deployment:
+    if: inputs.confirm == 'CANCEL_DEPLOYMENT'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Install SSH key
+        env:
+          DEPLOY_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%b\n' "$DEPLOY_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+      - name: Stop deployment service and timer
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" \
+            'sudo systemctl stop minecraft-deploy.timer; sudo systemctl stop minecraft-deploy.service || true; current=$(sudo cat /srv/minecraft/state/current-release 2>/dev/null || true); if [ -n "$current" ]; then printf "%s\n" "$current" | sudo tee /srv/minecraft/state/target-release >/dev/null; printf "CANCELLED\n" | sudo tee /srv/minecraft/state/deploy-state >/dev/null; fi; printf "deploy-state="; sudo cat /srv/minecraft/state/deploy-state 2>/dev/null || true; printf "current-release="; sudo cat /srv/minecraft/state/current-release 2>/dev/null || true; printf "target-release="; sudo cat /srv/minecraft/state/target-release 2>/dev/null || true; printf "previous-release="; sudo cat /srv/minecraft/state/previous-release 2>/dev/null || true; sudo systemctl is-active minecraft-deploy.timer minecraft-deploy.service minecraft.service || true'
