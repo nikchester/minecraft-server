@@ -4,7 +4,7 @@ Plugin JAR files are not committed. Versions are declared in `../versions.yml` a
 
 Required plugins for v1:
 
-- AuthMeReloaded — its `config.yml` must keep `settings.restrictions.timeout: 60` (players need enough time to type a password twice) and `settings.restrictions.maxRegPerIp: 0` (unlimited registrations per IP, so a second player behind the same household/NAT can still register); `scripts/ensure-authme-config.sh` self-heals both on every deploy cycle since the config file lives in the persistent, uncommitted plugin data directory.
+- AuthMeReloaded — its committed `config.yml` keeps `settings.restrictions.timeout: 60` and `settings.restrictions.maxRegPerIp: 0`; release preparation renders it into persistent plugin data, and `scripts/ensure-authme-config.sh` also checks these settings on deploy ticks.
 - CoreProtect
 - Onlysleep — the pinned 1.4.2 build skips the night once 50% of eligible players in that world are sleeping (rounded up). Its settings and Russian player-facing messages are committed under `Onlysleep/`; the shared bStats config opts out of metrics.
 
@@ -14,8 +14,8 @@ Optional administrative plugin:
 
 Optional gameplay plugin:
 
-- Dynamic Lights — held/worn light sources illuminate the world around a player without placing blocks. Its config.yml must keep `track_mobs: false` so mobs holding light sources (e.g. a zombie with a torch) don't also emit light; `scripts/ensure-dynamiclights-config.sh` self-heals this setting on every deploy cycle since the config file itself lives in the persistent, uncommitted plugin data directory.
+- Dynamic Lights — held/worn light sources illuminate the world around a player without placing blocks. Its committed `config.yml` keeps `track_mobs: false`; `scripts/ensure-dynamiclights-config.sh` also checks this setting on deploy ticks.
 
 Optional communication plugin (issue #20):
 
-- DiscordSRV — its Voice Proximity module (`voice.yml`) links a Discord voice channel to in-game distance, so nearby players hear each other over Discord. It is pinned in `../versions.yml`; `scripts/ensure-discordsrv-config.sh` bootstraps its default files on first deploy, applies the project's chat and voice channel IDs, and renders the bot token from `DISCORD_BOT_TOKEN` (`../../docs/SECRETS.md`) on every deploy cycle. Local live testing confirmed bot login, chat relay, and two-player proximity voice. See `../../docs/LOCAL_PLUGIN_TESTING.md` for the test setup and production configuration details.
+- DiscordSRV — its committed `config.yml` and `voice.yml` pin the chat channel and proximity voice settings; release preparation renders `DISCORD_BOT_TOKEN` from the environment or `/etc/minecraft/secrets/discord_bot_token` (`../../docs/SECRETS.md`). The config is based on the pinned 1.30.5 upstream defaults. Local live testing confirmed bot login, chat relay, and two-player proximity voice. See `../../docs/LOCAL_PLUGIN_TESTING.md` for the test setup and production configuration details.
