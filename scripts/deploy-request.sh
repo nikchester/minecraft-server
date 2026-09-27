@@ -145,6 +145,10 @@ unit=$NORMAL_UNIT
 if [[ "$FORCE" == "true" ]]; then
   unit=$FORCE_UNIT
 fi
+# A previous deployment may have left SUCCESS in deploy-state. Clear it before
+# starting the new controller so the first status poll cannot mistake that
+# stale result for completion of this request.
+printf '%s\n' REQUESTED >"$MINECRAFT_STATE_DIR/deploy-state"
 systemctl start --no-block "$unit"
 new_service_started=true
 if [[ "$timer_was_active" == "true" ]]; then
@@ -159,10 +163,15 @@ flock -u 9
 exec 9>&-
 
 request_started=$(date +%s)
+observed_running=false
 while true; do
   service_state=$(systemctl show -p ActiveState --value "$unit" 2>/dev/null || true)
   deploy_state=$(cat "$MINECRAFT_STATE_DIR/deploy-state" 2>/dev/null || true)
-  if [[ "$service_state" == "inactive" && "$deploy_state" == "SUCCESS" ]]; then
+  case "$service_state" in
+    active|activating|reloading) observed_running=true ;;
+  esac
+  if [[ "$service_state" == "inactive" && "$deploy_state" == "SUCCESS" ]] \
+    && [[ "$(cat "$MINECRAFT_STATE_DIR/current-release" 2>/dev/null || true)" == "$(cat "$MINECRAFT_STATE_DIR/target-release" 2>/dev/null || true)" ]]; then
     systemctl status "$unit" --no-pager || true
     exit 0
   fi
@@ -174,10 +183,20 @@ while true; do
     journalctl -u "$unit" -n 200 --no-pager || true
     fail "$unit failed (deploy state: ${deploy_state:-unknown})"
   fi
+  if [[ "$service_state" == "inactive" && "$observed_running" == "true" ]]; then
+    journalctl -u "$unit" -n 200 --no-pager || true
+    fail "$unit stopped without a successful deployment (deploy state: ${deploy_state:-unknown})"
+  fi
   now=$(date +%s)
   if [[ $((now - request_started)) -ge "$REQUEST_TIMEOUT" ]]; then
-    journalctl -u "$unit" -n 100 --no-pager || true
-    fail "timed out waiting for deployment completion; $unit remains running in the background"
+    if [[ "$service_state" == "active" || "$service_state" == "activating" || "$service_state" == "reloading" ]]; then
+      log "deployment is still pending ($unit, state: ${deploy_state:-unknown}); check the service and deploy-state for its final result"
+      # The request was accepted and the controller is still running. Its
+      # completion cannot be reported as a failure merely because players
+      # remain online (or backup / startup takes longer than the CI wait).
+      exit 0
+    fi
+    fail "deployment did not complete (unit=$unit service=$service_state state=${deploy_state:-unknown})"
   fi
   sleep "$REQUEST_POLL"
 done
