@@ -39,6 +39,7 @@ services:
       AUTHME_EMAIL_OAUTH2_TOKEN: test-authme-oauth-token
       AUTHME_LICENSE_KEY: test-authme-license-key
       AUTHME_LOGINSECURITY_MYSQL_PASSWORD: test-loginsecurity-password
+      DISCORD_BOT_TOKEN: test-discord-bot-token
       RCLONE_CONFIG: /opt/test/fixtures/rclone.conf
       RESTIC_PASSWORD_FILE: /opt/test/fixtures/restic_password
       HEALTHCHECKS_BACKUP_URL_FILE: /opt/test/fixtures/healthchecks_backup_url
@@ -57,4 +58,5 @@ services:
       RCON_PASSWORD: ${RCON_PASSWORD:-local-paper-smoke-rcon}
       MANAGEMENT_SERVER_SECRET: ${MANAGEMENT_SERVER_SECRET:-local-paper-smoke-management}
       AUTHME_MYSQL_PASSWORD: ${AUTHME_MYSQL_PASSWORD:-local-paper-smoke-authme}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-BOTTOKEN}
       PAPER_SMOKE_TIMEOUT_SECONDS: 600

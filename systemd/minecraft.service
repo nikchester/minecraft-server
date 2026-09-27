@@ -16,6 +16,7 @@ Environment=JAVA_XMX=3G
 EnvironmentFile=-/etc/minecraft/minecraft.env
 ExecStart=/usr/bin/java -Xms${JAVA_XMS} -Xmx${JAVA_XMX} -jar paper.jar nogui
 ExecStop=/bin/kill -TERM $MAINPID
+TimeoutStopSec=300
 Restart=on-failure
 RestartSec=10
 NoNewPrivileges=true

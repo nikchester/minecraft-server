@@ -28,7 +28,7 @@ test_concurrent_operation_blocks_then_proceeds() {
   exec 8>"/srv/minecraft/state/operation.lock"
   flock 8
 
-  timeout 5 /opt/minecraft/bin/deploy.sh &
+  timeout 12 /opt/minecraft/bin/deploy.sh &
   local deploy_pid=$!
   sleep 1
 

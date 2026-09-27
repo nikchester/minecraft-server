@@ -12,7 +12,7 @@ test_normal_and_force_deploy_notices() {
   # waiting, then log them out so the deploy can proceed through its grace.
   printf '1\n' >/tmp/minecraft-stub-online
   prepare_release "rel2" || return 1
-  DEPLOY_PLAYER_POLL_SECONDS=1 DEPLOY_RESTART_COUNTDOWN_SECONDS=2 \
+  DEPLOY_PLAYER_POLL_SECONDS=1 DEPLOY_PENDING_NOTICE_INTERVAL_SECONDS=3 DEPLOY_RESTART_COUNTDOWN_SECONDS=2 \
     /opt/minecraft/bin/deploy.sh >/tmp/deploy-notice-test.log 2>&1 &
   local deploy_pid=$!
   local attempt=0
@@ -26,6 +26,27 @@ test_normal_and_force_deploy_notices() {
   if ! grep -Fq 'say Скоро будет обновление.' /tmp/minecraft-stub-rcon.log 2>/dev/null; then
     echo "  ASSERT FAILED: normal deploy did not announce that it is waiting for players" >&2
     cat /tmp/deploy-notice-test.log >&2
+    kill "$deploy_pid" 2>/dev/null || true
+    wait "$deploy_pid" 2>/dev/null || true
+    return 1
+  fi
+  # Exercise the periodic notice using a short override so the test does
+  # not spend five minutes waiting for a second announcement.
+  local first_notices second_notices
+  first_notices=$(grep -Fc 'say Скоро будет обновление.' /tmp/minecraft-stub-rcon.log)
+  sleep 1
+  second_notices=$(grep -Fc 'say Скоро будет обновление.' /tmp/minecraft-stub-rcon.log)
+  assert_eq "$first_notices" "$second_notices" "(pending notice is rate-limited)" || return 1
+  local attempt_repeated=0
+  while ((attempt_repeated < 60)); do
+    if [[ "$(grep -Fc 'say Скоро будет обновление.' /tmp/minecraft-stub-rcon.log)" -gt "$first_notices" ]]; then
+      break
+    fi
+    attempt_repeated=$((attempt_repeated + 1))
+    sleep 0.1
+  done
+  if [[ "$(grep -Fc 'say Скоро будет обновление.' /tmp/minecraft-stub-rcon.log)" -le "$first_notices" ]]; then
+    echo "  ASSERT FAILED: pending notice was not repeated" >&2
     kill "$deploy_pid" 2>/dev/null || true
     wait "$deploy_pid" 2>/dev/null || true
     return 1

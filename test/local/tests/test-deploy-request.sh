@@ -124,6 +124,30 @@ test_safe_deploy_request_handoff() {
     "say Внимание: запущено принудительное обновление." "(force request used force controller)" || return 1
 }
 
+test_long_pending_request_is_accepted_without_claiming_completion() {
+  reset_environment
+  prepare_release rel1 || return 1
+  DEPLOY_RESTART_COUNTDOWN_SECONDS=0 /opt/minecraft/bin/deploy.sh || return 1
+  printf '1\n' >/tmp/minecraft-stub-online
+  DEPLOY_RELEASE_ID=rel2 DEPLOY_PLAYER_POLL_SECONDS=1 \
+    DEPLOY_REQUEST_TIMEOUT_SECONDS=2 DEPLOY_REQUEST_POLL_SECONDS=1 \
+    DEPLOY_RESTART_COUNTDOWN_SECONDS=0 \
+    /opt/test/repo/scripts/deploy-request.sh >/tmp/deploy-request-timeout.log 2>&1 || {
+      cat /tmp/deploy-request-timeout.log >&2
+      return 1
+    }
+  assert_eq rel1 "$(cat /srv/minecraft/state/current-release)" '(request accepted; not yet deployed)' || return 1
+  assert_contains "$(cat /tmp/deploy-request-timeout.log)" 'deployment is still pending' || return 1
+  printf '0\n' >/tmp/minecraft-stub-online
+  local attempt
+  for ((attempt=0; attempt<150; attempt++)); do
+    [[ "$(cat /srv/minecraft/state/current-release 2>/dev/null || true)" == rel2 ]] && break
+    sleep 0.1
+  done
+  assert_eq rel2 "$(cat /srv/minecraft/state/current-release)" '(controller finishes after CI returns)' || return 1
+}
+
 reset_environment
 run_test "deployment requests supersede only safe pending work" test_safe_deploy_request_handoff
+run_test "long player wait returns accepted while controller keeps running" test_long_pending_request_is_accepted_without_claiming_completion
 report_and_exit

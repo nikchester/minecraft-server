@@ -8,7 +8,7 @@ source "$SCRIPT_DIR/lib.sh"
 FORCE=${FORCE_DEPLOY:-false}
 GRACE_SECONDS=${DEPLOY_EMPTY_GRACE_SECONDS:-300}
 PENDING_NOTICE_AFTER=${DEPLOY_PENDING_NOTICE_AFTER_SECONDS:-86400}
-PENDING_NOTICE_INTERVAL=${DEPLOY_PENDING_NOTICE_INTERVAL_SECONDS:-900}
+PENDING_NOTICE_INTERVAL=${DEPLOY_PENDING_NOTICE_INTERVAL_SECONDS:-300}
 PLAYER_POLL_SECONDS=${DEPLOY_PLAYER_POLL_SECONDS:-60}
 RESTART_COUNTDOWN_SECONDS=${DEPLOY_RESTART_COUNTDOWN_SECONDS:-60}
 
@@ -221,8 +221,7 @@ run_deploy() {
   # report they got kicked mid-registration.
   "$SCRIPT_DIR/ensure-authme-config.sh"
   # Self-heal DiscordSRV's secret token and production chat/voice IDs every
-  # tick. The configs are bootstrapped from the selected plugin jar on first
-  # install below while Minecraft is stopped.
+  # tick. Its complete configuration is rendered from Git during preparation.
   "$SCRIPT_DIR/ensure-discordsrv-config.sh"
   # minecraft-deploy.timer fires this unconditionally every minute. Without
   # this check, once a target release exists it would re-run a full backup
@@ -269,8 +268,26 @@ run_deploy() {
     else
       notify_players "Сервер перезапускается для обновления. Пожалуйста, сохранитесь и выйдите."
     fi
+    if [[ "$FORCE" != "true" ]]; then
+      # Backup and the final countdown can outlast the empty-server grace.
+      # A reconnect in that window must not be stopped mid-session (player
+      # dimension and position are only reliable after a graceful save).
+      local online
+      online=$("$SCRIPT_DIR/player-count.sh" 127.0.0.1 25565 || echo 999)
+      if [[ "$online" -ne 0 ]]; then
+        log "player rejoined after the backup/countdown; waiting before restart"
+        wait_status=0
+        wait_for_empty_server || wait_status=$?
+        if [[ "$wait_status" -eq 2 ]]; then
+          return 0
+        elif [[ "$wait_status" -ne 0 ]]; then
+          return "$wait_status"
+        fi
+        set_state DEPLOYING
+      fi
+    fi
   fi
-  systemctl stop minecraft.service || true
+  systemctl stop minecraft.service || fail "could not gracefully stop Minecraft; leaving the existing release active"
   # Release preparation is intentionally separate; this controller verifies and switches prepared releases.
   if [[ -f "$MINECRAFT_STATE_DIR/target-release" ]]; then
     target=$(cat "$MINECRAFT_STATE_DIR/target-release")
@@ -278,10 +295,8 @@ run_deploy() {
     readlink -f "$MINECRAFT_CURRENT_DIR" | xargs -r basename >"$MINECRAFT_STATE_DIR/previous-release"
     switch_current "$target"
   fi
-  # Seed DiscordSRV's complete embedded defaults and heal its project-specific
-  # settings while the server is stopped, before its first plugin load. This
-  # also avoids editing its persistent config files while players are online.
-  DISCORDSRV_BOOTSTRAP_DEFAULTS=true "$SCRIPT_DIR/ensure-discordsrv-config.sh"
+  # Check the repository-rendered DiscordSRV configuration before plugin load.
+  "$SCRIPT_DIR/ensure-discordsrv-config.sh"
   if verify_release; then
     if [[ -f "$MINECRAFT_STATE_DIR/target-release" ]]; then
       # Pruning runs before current-release is written: if it fails (e.g.

@@ -11,8 +11,8 @@ export RESTIC_REPOSITORY="rclone:minio:minecraft-restic"
 export RESTIC_PASSWORD_FILE=/opt/test/fixtures/restic_password
 export HOME=/root
 
-restic_snapshot_count() {
-  restic snapshots --json 2>/dev/null | grep -o '"short_id"' | wc -l
+latest_scheduled_snapshot() {
+  restic snapshots --json --tag scheduled 2>/dev/null | python3 -c 'import json, sys; snapshots = json.load(sys.stdin); print(max(snapshots, key=lambda snapshot: snapshot["time"])["id"] if snapshots else "")'
 }
 
 deploy_one_release() {
@@ -24,12 +24,12 @@ test_backup_creates_snapshot() {
   reset_environment
   deploy_one_release || return 1
   local before after
-  before=$(restic_snapshot_count)
+  before=$(latest_scheduled_snapshot) || return 1
   /opt/minecraft/bin/backup.sh scheduled || return 1
-  after=$(restic_snapshot_count)
+  after=$(latest_scheduled_snapshot) || return 1
   assert_file_exists /srv/minecraft/state/last-backup-success || return 1
-  if [[ "$after" -le "$before" ]]; then
-    echo "  ASSERT FAILED: expected snapshot count to increase (before=${before} after=${after})" >&2
+  if [[ -z "$after" || "$after" == "$before" ]]; then
+    echo "  ASSERT FAILED: expected a new scheduled snapshot (before=${before} after=${after})" >&2
     return 1
   fi
 }
