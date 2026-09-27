@@ -221,8 +221,7 @@ run_deploy() {
   # report they got kicked mid-registration.
   "$SCRIPT_DIR/ensure-authme-config.sh"
   # Self-heal DiscordSRV's secret token and production chat/voice IDs every
-  # tick. The configs are bootstrapped from the selected plugin jar on first
-  # install below while Minecraft is stopped.
+  # tick. Its complete configuration is rendered from Git during preparation.
   "$SCRIPT_DIR/ensure-discordsrv-config.sh"
   # minecraft-deploy.timer fires this unconditionally every minute. Without
   # this check, once a target release exists it would re-run a full backup
@@ -278,10 +277,8 @@ run_deploy() {
     readlink -f "$MINECRAFT_CURRENT_DIR" | xargs -r basename >"$MINECRAFT_STATE_DIR/previous-release"
     switch_current "$target"
   fi
-  # Seed DiscordSRV's complete embedded defaults and heal its project-specific
-  # settings while the server is stopped, before its first plugin load. This
-  # also avoids editing its persistent config files while players are online.
-  DISCORDSRV_BOOTSTRAP_DEFAULTS=true "$SCRIPT_DIR/ensure-discordsrv-config.sh"
+  # Check the repository-rendered DiscordSRV configuration before plugin load.
+  "$SCRIPT_DIR/ensure-discordsrv-config.sh"
   if verify_release; then
     if [[ -f "$MINECRAFT_STATE_DIR/target-release" ]]; then
       # Pruning runs before current-release is written: if it fails (e.g.
