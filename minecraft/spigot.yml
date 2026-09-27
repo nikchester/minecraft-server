@@ -1,0 +1,14 @@
+# Repository-managed mob tuning; prepare-release.sh renders this into each release.
+world-settings:
+  default:
+    mob-spawn-range: 6
+    entity-activation-range:
+      monsters: 24
+      animals: 20
+      raiders: 48
+      misc: 12
+      water: 8
+    entity-tracking-range:
+      animals: 48
+      monsters: 48
+      misc: 48

@@ -200,6 +200,12 @@ prepare() {
   "$SCRIPT_DIR/render-config.py" \
     --source minecraft/server.properties \
     --output "$RELEASE_DIR/server.properties"
+  local config_name
+  for config_name in spigot.yml bukkit.yml; do
+    "$SCRIPT_DIR/render-config.py" \
+      --source "minecraft/$config_name" \
+      --output "$RELEASE_DIR/$config_name"
+  done
   render_config_tree "$PWD/minecraft/config" "$RELEASE_DIR/config"
   cp -a minecraft/server-icon.png "$RELEASE_DIR/server-icon.png"
   # Paper refuses to start at all without this; operating this server at
