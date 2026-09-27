@@ -73,6 +73,17 @@ for name, rendered in checks.items():
         print(f"FAIL: {name} was not rendered from the smoke environment.", file=sys.stderr)
         raise SystemExit(1)
     print(f"PASS: {name} reached the rendered runtime configuration.")
+
+spigot = yaml.safe_load((release / "spigot.yml").read_text(encoding="utf-8"))
+bukkit = yaml.safe_load((release / "bukkit.yml").read_text(encoding="utf-8"))
+world = spigot["world-settings"]["default"]
+if (world["mob-spawn-range"] != 6 or world["entity-activation-range"]["monsters"] != 24
+        or world["entity-tracking-range"]["animals"] != 48
+        or bukkit["spawn-limits"]["monsters"] != 50
+        or bukkit["ticks-per"]["monster-spawns"] != 2):
+    print("FAIL: mob tuning was not rendered from Git.", file=sys.stderr)
+    raise SystemExit(1)
+print("PASS: spigot.yml and bukkit.yml contain the repository mob tuning.")
 PY
 
 echo "Starting the real Paper server and downloaded plugin JARs..."
