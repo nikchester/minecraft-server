@@ -1,0 +1,11 @@
+# DiscordSRV 1.30.5 proximity voice module.
+Voice enabled: true
+Tick speed: 5
+Voice category: 1551598654245310494
+Lobby channel: 1551598909024112726
+Mute users who bypass speak permissions in the lobby: true
+Network:
+  Vertical Strength: 40
+  Horizontal Strength: 80
+  Falloff: 5
+  Channels are visible: false
