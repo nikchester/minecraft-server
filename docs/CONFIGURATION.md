@@ -10,6 +10,7 @@ change the repository source and deploy rather than treating files under
 | Git source | Runtime result | Notes |
 |---|---|---|
 | `minecraft/server.properties` | `/srv/minecraft/releases/<id>/server.properties` | `{{RCON_PASSWORD}}` is rendered by `scripts/render-config.py`. |
+| `minecraft/spigot.yml`, `minecraft/bukkit.yml` | `/srv/minecraft/releases/<id>/spigot.yml`, `bukkit.yml` | Mob limits and ranges are versioned and rendered before Paper starts. |
 | `minecraft/config/*.yml` | `/srv/minecraft/releases/<id>/config/*.yml` | Paper 26.2 production configs are rendered/copied before server startup. |
 | `minecraft/plugins/<plugin>/**` | `/srv/minecraft/shared/plugins/<plugin>/**` | AuthMe, Chunky, CoreProtect, DiscordSRV, DynamicLights and Onlysleep configuration is rendered/copied during release preparation; databases remain persistent runtime state. DiscordSRV's `{{DISCORD_BOT_TOKEN}}` is resolved from runtime secrets. |
 | `minecraft/versions.yml` | Release JARs under `/srv/minecraft/releases/<id>/` | Pins Minecraft, Paper, plugin versions, and artifact URLs. |
