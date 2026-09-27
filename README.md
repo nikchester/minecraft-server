@@ -19,7 +19,7 @@ The server is live and deployed at `minecraft.nikchester.ru:25565`. The full pip
 
 - `SPEC.md` - implementation contract and requirements.
 - `PLAN.md` - phased implementation plan and exit criteria.
-- `CONTRIBUTING.md` - contributor workflow and local verification commands.
+- `CONTRIBUTING.md` - branch/PR promotion rules and local verification commands.
 - `minecraft-server-architecture.md` - detailed architecture rationale and constraints.
 - `docs/OPERATIONS.md` - day-to-day commands and runbooks.
 - `docs/LOCAL_PLUGIN_TESTING.md` - run a real Paper server with a candidate plugin locally, before it's added to production.
