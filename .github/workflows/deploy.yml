@@ -61,6 +61,10 @@ jobs:
             --source minecraft/plugins/AuthMe/config.yml \
             --output "$render_dir/authme-config.yml" \
             --env-file /dev/null
+          python3 scripts/render-config.py \
+            --source minecraft/plugins/DiscordSRV/config.yml \
+            --output "$render_dir/discordsrv-config.yml" \
+            --env-file /dev/null
       - name: Install SSH key
         env:
           DEPLOY_KEY: ${{ secrets.VPS_SSH_KEY }}

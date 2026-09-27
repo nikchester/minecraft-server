@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -15,7 +16,7 @@ class RenderConfigTests(unittest.TestCase):
             source = root / f"source{suffix}"
             output = root / "out" / "rendered.properties"
             source.write_text(source_text, encoding="utf-8")
-            command = ["python3", str(RENDERER), "--source", str(source), "--output", str(output)]
+            command = [sys.executable, str(RENDERER), "--source", str(source), "--output", str(output)]
             if secret_dir:
                 command += ["--secret-dir", str(secret_dir)]
             if env_file:
@@ -31,7 +32,8 @@ class RenderConfigTests(unittest.TestCase):
         result, rendered, mode = self.render("rcon.password={{RCON_PASSWORD}}\n", env=env)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(rendered, "rcon.password=local-test-secret\n")
-        self.assertEqual(mode, 0o600)
+        if os.name == "posix":
+            self.assertEqual(mode, 0o600)
 
     def test_local_env_file_is_rendered(self):
         with tempfile.TemporaryDirectory() as directory:

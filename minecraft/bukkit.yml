@@ -1,0 +1,6 @@
+# Repository-managed mob tuning; prepare-release.sh renders this into each release.
+spawn-limits:
+  monsters: 50
+  ambient: 8
+ticks-per:
+  monster-spawns: 2

@@ -8,7 +8,6 @@ source "$SCRIPT_DIR/lib.sh"
 DISCORDSRV_CONFIG=${DISCORDSRV_CONFIG:-$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/config.yml}
 DISCORDSRV_VOICE_CONFIG=${DISCORDSRV_VOICE_CONFIG:-$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/voice.yml}
 DISCORD_BOT_TOKEN_FILE=${DISCORD_BOT_TOKEN_FILE:-/etc/minecraft/secrets/discord_bot_token}
-DISCORDSRV_BOOTSTRAP_DEFAULTS=${DISCORDSRV_BOOTSTRAP_DEFAULTS:-false}
 
 # The project's one real Discord server -- the same IDs
 # test/paper-local/entrypoint.sh seeds locally (see
@@ -19,67 +18,8 @@ DISCORD_CHANNEL_ID="1551597801933242418"
 DISCORD_VOICE_CATEGORY_ID="1551598654245310494"
 DISCORD_LOBBY_CHANNEL_ID="1551598909024112726"
 
-# On the first install DiscordSRV has not created its persistent config
-# directory yet. Seed both complete defaults from the freshly selected plugin
-# jar before the server starts, then the normal self-heal functions below can
-# set the project-specific values. Only run this after minecraft.service has
-# stopped; never replace existing files or edit them from a live deploy tick.
-bootstrap_discordsrv_defaults() {
-  [[ "$DISCORDSRV_BOOTSTRAP_DEFAULTS" == "true" ]] || return 0
-
-  local plugin_jar
-  plugin_jar=$(find "$MINECRAFT_CURRENT_DIR/plugins" -maxdepth 1 -type f -name 'discordsrv-*.jar' -print -quit 2>/dev/null || true)
-  if [[ -z "$plugin_jar" ]]; then
-    log "DiscordSRV jar not present in current release; skipping config bootstrap"
-    return 0
-  fi
-
-  mkdir -p "$(dirname "$DISCORDSRV_CONFIG")" "$(dirname "$DISCORDSRV_VOICE_CONFIG")"
-  python3 - "$plugin_jar" "$DISCORDSRV_CONFIG" "$DISCORDSRV_VOICE_CONFIG" <<'PY'
-import os
-import grp
-import pwd
-import sys
-import tempfile
-import zipfile
-
-jar, config_path, voice_path = sys.argv[1:]
-targets = {"config/en.yml": config_path, "voice/en.yml": voice_path}
-with zipfile.ZipFile(jar) as archive:
-    for name, target in targets.items():
-        if os.path.exists(target):
-            continue
-        try:
-            contents = archive.read(name)
-        except KeyError:
-            raise SystemExit(f"DiscordSRV jar is missing its embedded {name}")
-        fd, temporary = tempfile.mkstemp(prefix=f".{os.path.basename(target)}.", dir=os.path.dirname(target))
-        try:
-            with os.fdopen(fd, "wb") as output:
-                output.write(contents)
-            os.chmod(temporary, 0o644)
-            try:
-                # Do not replace a config created concurrently or preserved
-                # from an earlier run.
-                os.link(temporary, target)
-                os.chown(target, pwd.getpwnam("minecraft").pw_uid, grp.getgrnam("minecraft").gr_gid)
-            except FileExistsError:
-                pass
-        finally:
-            os.unlink(temporary)
-PY
-  log "seeded missing DiscordSRV config files from $(basename "$plugin_jar")"
-}
-
-# DiscordSRV writes its own config.yml on first run with a literal
-# BotToken: "BOTTOKEN" placeholder (see minecraft/plugins/README.md); the
-# real token is a secret (docs/SECRETS.md, DISCORD_BOT_TOKEN) and must never
-# be committed, so it's rendered in here from
-# /etc/minecraft/secrets/discord_bot_token instead -- same self-heal
-# approach as ensure-authme-config.sh/ensure-dynamiclights-config.sh, so a
-# plugin update or a hand-edit that reverts the key back to the placeholder
-# gets corrected on the next deploy tick rather than leaving the bot offline
-# until someone notices.
+# The release preparation renders the committed DiscordSRV config with the bot
+# token from the secret store; this check heals drift in older installations.
 ensure_discordsrv_token() {
   if [[ ! -f "$DISCORDSRV_CONFIG" ]]; then
     log "DiscordSRV config not present yet at ${DISCORDSRV_CONFIG} (plugin has not started); nothing to heal"
@@ -93,7 +33,8 @@ ensure_discordsrv_token() {
   local token escaped_token
   token=$(<"$DISCORD_BOT_TOKEN_FILE")
 
-  if grep -qxF "BotToken: \"${token}\"" "$DISCORDSRV_CONFIG"; then
+  if grep -qxF "BotToken: \"${token}\"" "$DISCORDSRV_CONFIG" ||
+    grep -qxF "BotToken: '${token}'" "$DISCORDSRV_CONFIG"; then
     return
   fi
 
@@ -105,9 +46,8 @@ ensure_discordsrv_token() {
   sed -i "s|^BotToken:.*|BotToken: \"${escaped_token}\"|" "$DISCORDSRV_CONFIG"
 }
 
-# Same self-heal approach as the token above: config.yml/voice.yml live in
-# the plugin's own persistent, uncommitted data directory, so a plugin
-# update or hand-edit could drift these back to their generated defaults
+# Same self-heal approach as the token above: config.yml/voice.yml are
+# rendered into persistent plugin data, so a plugin update could drift them
 # (an empty Channels map, a null Voice category/Lobby channel, Voice
 # enabled: false). This forces them back to the real server on every tick
 # instead of leaving the chat bridge or voice module silently unconfigured.
@@ -159,7 +99,6 @@ secure_discordsrv_configs() {
   fi
 }
 
-bootstrap_discordsrv_defaults
 ensure_discordsrv_token
 ensure_discordsrv_channels
 ensure_discordsrv_voice
