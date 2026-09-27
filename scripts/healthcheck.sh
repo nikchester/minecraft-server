@@ -7,6 +7,7 @@ source "$SCRIPT_DIR/lib.sh"
 
 FAILURES=0
 WARNINGS=0
+FAILURE_DETAILS=()
 HOST=${MINECRAFT_HEALTH_HOST:-127.0.0.1}
 PORT=${MINECRAFT_HEALTH_PORT:-25565}
 DISK_WARNING=${MINECRAFT_DISK_WARNING_PERCENT:-80}
@@ -17,6 +18,7 @@ check_service() {
   if ! systemctl is-active --quiet minecraft.service; then
     log "minecraft.service is not active"
     FAILURES=$((FAILURES + 1))
+    FAILURE_DETAILS+=("minecraft.service inactive")
   fi
 }
 
@@ -24,6 +26,7 @@ check_ping() {
   if ! "$SCRIPT_DIR/minecraft-status.py" "$HOST" "$PORT" >/tmp/minecraft-status.json; then
     log "Minecraft protocol ping failed"
     FAILURES=$((FAILURES + 1))
+    FAILURE_DETAILS+=("Minecraft protocol ping failed")
   fi
 }
 
@@ -33,6 +36,7 @@ check_disk() {
   if [[ "$usage" -ge "$DISK_CRITICAL" ]]; then
     telegram_alert critical "disk usage critical: ${usage}%"
     FAILURES=$((FAILURES + 1))
+    FAILURE_DETAILS+=("disk usage ${usage}%")
   elif [[ "$usage" -ge "$DISK_WARNING" ]]; then
     telegram_alert warning "disk usage warning: ${usage}%"
     WARNINGS=$((WARNINGS + 1))
@@ -44,6 +48,7 @@ check_backup_age() {
   if [[ ! -f "$stamp" ]]; then
     telegram_alert critical "no successful backup marker exists"
     FAILURES=$((FAILURES + 1))
+    FAILURE_DETAILS+=("no successful backup marker")
     return
   fi
   local now last age
@@ -53,6 +58,7 @@ check_backup_age() {
   if [[ "$age" -gt "$BACKUP_MAX_AGE_SECONDS" ]]; then
     telegram_alert critical "backup is stale: ${age}s old"
     FAILURES=$((FAILURES + 1))
+    FAILURE_DETAILS+=("backup stale (${age}s)")
   fi
 }
 
@@ -65,14 +71,32 @@ check_memory() {
   fi
 }
 
-check_service
-check_ping
+# A controller in the middle of a release intentionally stops/restarts Paper.
+# Skip only availability checks while it is actually running; disk, backup and
+# memory checks remain active, and a failed/stopped controller is not masked.
+controller_running() {
+  local state
+  state=$(systemctl show -p ActiveState --value "$1" 2>/dev/null || true)
+  [[ "$state" == active || "$state" == activating || "$state" == reloading ]]
+}
+deploy_state=$(cat "$MINECRAFT_STATE_DIR/deploy-state" 2>/dev/null || true)
+if [[ "$deploy_state" == BACKUP || "$deploy_state" == DEPLOYING \
+    || "$deploy_state" == VERIFYING || "$deploy_state" == ROLLBACK \
+    || "$deploy_state" == VERIFY_ROLLBACK ]] \
+  && { controller_running minecraft-deploy.service \
+    || controller_running minecraft-deploy-force.service; }; then
+  log "deployment active; deferring Minecraft availability checks"
+else
+  check_service
+  check_ping
+fi
 check_disk
 check_backup_age
 check_memory
 
 if [[ "$FAILURES" -gt 0 ]]; then
-  telegram_alert critical "healthcheck failed with ${FAILURES} failures and ${WARNINGS} warnings"
+  details=$(IFS='; '; printf '%s' "${FAILURE_DETAILS[*]}")
+  telegram_alert critical "healthcheck failed with ${FAILURES} failures and ${WARNINGS} warnings: ${details}"
   exit 1
 fi
 
