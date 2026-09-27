@@ -11,7 +11,7 @@ change the repository source and deploy rather than treating files under
 |---|---|---|
 | `minecraft/server.properties` | `/srv/minecraft/releases/<id>/server.properties` | `{{RCON_PASSWORD}}` is rendered by `scripts/render-config.py`. |
 | `minecraft/config/*.yml` | `/srv/minecraft/releases/<id>/config/*.yml` | Paper 26.2 production configs are rendered/copied before server startup. |
-| `minecraft/plugins/<plugin>/**` | `/srv/minecraft/shared/plugins/<plugin>/**` | AuthMe, Chunky, CoreProtect and DynamicLights configuration is rendered/copied before plugin startup; databases remain persistent runtime state. |
+| `minecraft/plugins/<plugin>/**` | `/srv/minecraft/shared/plugins/<plugin>/**` | AuthMe, Chunky, CoreProtect, DiscordSRV, DynamicLights and Onlysleep configuration is rendered/copied during release preparation; databases remain persistent runtime state. DiscordSRV's `{{DISCORD_BOT_TOKEN}}` is resolved from runtime secrets. |
 | `minecraft/versions.yml` | Release JARs under `/srv/minecraft/releases/<id>/` | Pins Minecraft, Paper, plugin versions, and artifact URLs. |
 | `ansible/`, `systemd/`, `scripts/`, `.github/workflows/` | VPS packages, units, and deployment behavior | Installed by provisioning/deploy workflows. |
 | `ansible/roles/minecraft/templates/server.properties.j2` | Ansible bootstrap server properties | Bootstrap-time template; normal releases use the source above. |

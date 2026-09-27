@@ -23,7 +23,7 @@ import sys
 
 lines = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace").splitlines()
 for line in lines[-60:]:
-    for name in ("RCON_PASSWORD", "MANAGEMENT_SERVER_SECRET", "AUTHME_MYSQL_PASSWORD"):
+    for name in ("RCON_PASSWORD", "MANAGEMENT_SERVER_SECRET", "AUTHME_MYSQL_PASSWORD", "DISCORD_BOT_TOKEN"):
         secret = os.environ.get(name, "")
         if secret:
             line = line.replace(secret, "[REDACTED]")
@@ -34,18 +34,6 @@ PY
 echo "Preparing release ${release_id} from pinned repository versions..."
 ARTIFACT_DOWNLOAD_MAX_TIME_SECONDS=${PAPER_ARTIFACT_DOWNLOAD_TIMEOUT_SECONDS:-600} \
   /opt/minecraft/bin/prepare-release.sh "$release_id"
-
-# Bootstrap DiscordSRV's config from the pinned jar, but deliberately remove
-# its token in this isolated smoke: CI proves Paper can enable the plugin and
-# never attempts a real Discord login or requires credentials.
-DISCORDSRV_BOOTSTRAP_DEFAULTS=true \
-DISCORD_BOT_TOKEN_FILE=/nonexistent/ci-discord-bot-token \
-MINECRAFT_CURRENT_DIR="$release_dir" \
-DISCORDSRV_CONFIG="$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/config.yml" \
-DISCORDSRV_VOICE_CONFIG="$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/voice.yml" \
-  /opt/minecraft/bin/ensure-discordsrv-config.sh
-sed -i 's/^BotToken:.*/BotToken: ""/' \
-  "$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/config.yml"
 
 python3 - "$release_dir" <<'PY'
 import os
@@ -73,7 +61,25 @@ for name, rendered in checks.items():
         print(f"FAIL: {name} was not rendered from the smoke environment.", file=sys.stderr)
         raise SystemExit(1)
     print(f"PASS: {name} reached the rendered runtime configuration.")
+
+discord = pathlib.Path("/srv/minecraft/shared/plugins/DiscordSRV")
+expected = {"config.yml", "voice.yml", "alerts.yml", "linking.yml", "synchronization.yml", "messages.yml"}
+for name in expected:
+    path = discord / name
+    if not path.is_file() or "{{" in path.read_text(encoding="utf-8"):
+        print(f"FAIL: {name} missing or has unresolved markers.", file=sys.stderr)
+        raise SystemExit(1)
+    yaml.safe_load(path.read_text(encoding="utf-8"))
+config = yaml.safe_load((discord / "config.yml").read_text(encoding="utf-8"))
+if config.get("BotToken") != os.environ.get("DISCORD_BOT_TOKEN"):
+    print("FAIL: DiscordSRV bot token was not rendered.", file=sys.stderr)
+    raise SystemExit(1)
+print("PASS: all six DiscordSRV configs rendered before Paper startup.")
 PY
+
+# Keep this isolated smoke offline from Discord; no real bot login is needed.
+sed -i 's/^BotToken:.*/BotToken: ""/' \
+  "$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/config.yml"
 
 echo "Starting the real Paper server and downloaded plugin JARs..."
 cd "$release_dir"
