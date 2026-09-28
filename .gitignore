@@ -4,6 +4,7 @@
 # Secrets and local overrides
 .env
 *.env
+test/staging/backups/
 *.key
 *.pem
 *.pub.local

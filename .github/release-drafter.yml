@@ -1,0 +1,46 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+change-template: '- $TITLE (#$NUMBER)'
+change-title-escapes: '\*_&'
+no-changes-template: '- No changes'
+sort-by: merged_at
+sort-direction: ascending
+
+categories:
+  - title: 'Reliability and infrastructure'
+    exclusive: true
+    when:
+      label: 'area:infrastructure'
+  - title: 'For players — breaking changes'
+    semver-increment: major
+    when:
+      label: 'release:major'
+  - title: 'For players — new features'
+    semver-increment: minor
+    when:
+      label: 'release:minor'
+  - title: 'For players — fixes and adjustments'
+    semver-increment: patch
+    when:
+      label: 'release:patch'
+  - title: 'Other changes'
+    semver-increment: patch
+  - type: version-resolver
+    semver-increment: major
+    when:
+      label: 'release:major'
+  - type: version-resolver
+    semver-increment: minor
+    when:
+      label: 'release:minor'
+  - type: version-resolver
+    semver-increment: patch
+    when:
+      label: 'release:patch'
+  - type: version-resolver
+    semver-increment: patch
+
+template: |
+  ## Changes
+
+  $CHANGES
