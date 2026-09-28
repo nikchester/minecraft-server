@@ -7,23 +7,23 @@ sort-by: merged_at
 sort-direction: ascending
 
 categories:
-  - title: 'Надёжность и инфраструктура'
+  - title: '🛠️ Надёжность и инфраструктура'
     exclusive: true
     when:
       label: 'area:infrastructure'
-  - title: 'Для игроков — несовместимые изменения'
+  - title: '⚠️ Для игроков — несовместимые изменения'
     semver-increment: major
     when:
       label: 'release:major'
-  - title: 'Для игроков — новые возможности'
+  - title: '🎮 Для игроков — новые возможности'
     semver-increment: minor
     when:
       label: 'release:minor'
-  - title: 'Для игроков — исправления и улучшения'
+  - title: '🔧 Для игроков — исправления и улучшения'
     semver-increment: patch
     when:
       label: 'release:patch'
-  - title: 'Прочие изменения'
+  - title: '📦 Прочие изменения'
     semver-increment: patch
   - type: version-resolver
     semver-increment: major
@@ -41,6 +41,18 @@ categories:
     semver-increment: patch
 
 template: |
-  ## Изменения
+  # 🎉 The Tatarland Rebirth — релиз $RESOLVED_VERSION
+
+  Первый стабильный релиз сервера! В этом выпуске собраны игровые возможности и улучшения надёжности.
+
+  ## 🎮 Для игроков
 
   $CHANGES
+
+  ## 🛠️ Надёжность и инфраструктура
+
+  $CHANGES
+
+  ## 📦 Версионирование и релизы
+
+  Нумерация версий следует SemVer: `MAJOR.MINOR.PATCH`. Несовместимые изменения повышают MAJOR, новые совместимые возможности — MINOR, исправления и улучшения — PATCH.
