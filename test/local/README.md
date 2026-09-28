@@ -23,6 +23,10 @@ implementation issue: #11.
 
 ## Running it
 
+For a persistent, manually started Paper server reachable from other devices
+on the local network, see [LAN staging](../staging/README.md). This test suite
+is disposable and does not host an interactive world.
+
 Requires Docker Desktop running.
 
 Run the complete local test pass, including real Paper and every configured

@@ -1,0 +1,22 @@
+name: minecraft-staging
+services:
+  paper:
+    build:
+      context: ../..
+      dockerfile: test/staging/Dockerfile
+    init: true
+    stop_grace_period: 120s
+    ports:
+      - "${STAGING_BIND_IP:?Set STAGING_BIND_IP to the LAN IPv4 address}:25566:25565/tcp"
+    volumes:
+      - world:/srv/minecraft
+      - ./backups:/backups
+    environment:
+      RCON_PASSWORD: ${STAGING_RCON_PASSWORD:?Set STAGING_RCON_PASSWORD}
+      MANAGEMENT_SERVER_SECRET: ${STAGING_MANAGEMENT_SECRET:?Set STAGING_MANAGEMENT_SECRET}
+      AUTHME_MYSQL_PASSWORD: ${STAGING_AUTHME_PASSWORD:?Set STAGING_AUTHME_PASSWORD}
+      DISCORD_BOT_TOKEN: staging-disabled
+    restart: "no"
+
+volumes:
+  world:
