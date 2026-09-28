@@ -2,28 +2,28 @@ name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 change-template: '- $TITLE (#$NUMBER)'
 change-title-escapes: '\*_&'
-no-changes-template: '- No changes'
+no-changes-template: '- Нет изменений'
 sort-by: merged_at
 sort-direction: ascending
 
 categories:
-  - title: 'Reliability and infrastructure'
+  - title: 'Надёжность и инфраструктура'
     exclusive: true
     when:
       label: 'area:infrastructure'
-  - title: 'For players — breaking changes'
+  - title: 'Для игроков — несовместимые изменения'
     semver-increment: major
     when:
       label: 'release:major'
-  - title: 'For players — new features'
+  - title: 'Для игроков — новые возможности'
     semver-increment: minor
     when:
       label: 'release:minor'
-  - title: 'For players — fixes and adjustments'
+  - title: 'Для игроков — исправления и улучшения'
     semver-increment: patch
     when:
       label: 'release:patch'
-  - title: 'Other changes'
+  - title: 'Прочие изменения'
     semver-increment: patch
   - type: version-resolver
     semver-increment: major
@@ -41,6 +41,6 @@ categories:
     semver-increment: patch
 
 template: |
-  ## Changes
+  ## Изменения
 
   $CHANGES
