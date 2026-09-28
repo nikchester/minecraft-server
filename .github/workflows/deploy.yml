@@ -7,6 +7,9 @@ on:
     types:
       - completed
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     if: >-
@@ -129,3 +132,44 @@ jobs:
             "sudo install -d -m 0700 '$request_dir/.secrets' && sudo tar -xzf - -C '$request_dir/.secrets'"
           ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" \
             "cd '$request_dir' && sudo DEPLOY_REQUEST_CLEANUP_REPO=true DEPLOY_SECRETS_DIR='$request_dir/.secrets' '$request_dir/scripts/deploy-request.sh'"
+
+  release-draft:
+    name: Update GitHub release draft
+    needs: deploy
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Check for a published stable baseline
+        id: baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          published_count=$(gh release list \
+            --repo "$GITHUB_REPOSITORY" \
+            --limit 100 \
+            --json isDraft,isPrerelease \
+            | jq '[.[] | select(.isDraft == false and .isPrerelease == false)] | length')
+          if [[ "$published_count" -eq 0 ]]; then
+            echo "initial=true" >>"$GITHUB_OUTPUT"
+            echo "No published stable release exists; preparing the v1.0.0 baseline draft."
+          else
+            echo "initial=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Draft initial v1.0.0 release
+        if: steps.baseline.outputs.initial == 'true'
+        uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter.yml
+          version: 1.0.0
+          commitish: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Draft next SemVer release
+        if: steps.baseline.outputs.initial == 'false'
+        uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter.yml
+          commitish: ${{ github.event.workflow_run.head_sha || github.sha }}
