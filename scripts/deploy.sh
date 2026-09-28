@@ -8,7 +8,7 @@ source "$SCRIPT_DIR/lib.sh"
 FORCE=${FORCE_DEPLOY:-false}
 GRACE_SECONDS=${DEPLOY_EMPTY_GRACE_SECONDS:-300}
 PENDING_NOTICE_AFTER=${DEPLOY_PENDING_NOTICE_AFTER_SECONDS:-86400}
-PENDING_NOTICE_INTERVAL=${DEPLOY_PENDING_NOTICE_INTERVAL_SECONDS:-900}
+PENDING_NOTICE_INTERVAL=${DEPLOY_PENDING_NOTICE_INTERVAL_SECONDS:-300}
 PLAYER_POLL_SECONDS=${DEPLOY_PLAYER_POLL_SECONDS:-60}
 RESTART_COUNTDOWN_SECONDS=${DEPLOY_RESTART_COUNTDOWN_SECONDS:-60}
 
@@ -130,6 +130,16 @@ verify_release() {
     log "AuthMe load evidence was not found in logs"
     return 1
   fi
+
+  # Older rollback releases may predate Onlysleep. If the current release
+  # carries its pinned JAR, require Paper to have enabled it before accepting
+  # the release; a failed plugin startup must trigger the normal rollback.
+  if compgen -G "$MINECRAFT_CURRENT_DIR/plugins/onlysleep-*.jar" >/dev/null; then
+    if ! grep -Riq 'Enabling Onlysleep ' "$MINECRAFT_CURRENT_DIR/logs" 2>/dev/null; then
+      log "Onlysleep load evidence was not found in logs"
+      return 1
+    fi
+  fi
 }
 
 rollback_release() {
@@ -211,8 +221,7 @@ run_deploy() {
   # report they got kicked mid-registration.
   "$SCRIPT_DIR/ensure-authme-config.sh"
   # Self-heal DiscordSRV's secret token and production chat/voice IDs every
-  # tick. The configs are bootstrapped from the selected plugin jar on first
-  # install below while Minecraft is stopped.
+  # tick. Its complete configuration is rendered from Git during preparation.
   "$SCRIPT_DIR/ensure-discordsrv-config.sh"
   # minecraft-deploy.timer fires this unconditionally every minute. Without
   # this check, once a target release exists it would re-run a full backup
@@ -268,10 +277,8 @@ run_deploy() {
     readlink -f "$MINECRAFT_CURRENT_DIR" | xargs -r basename >"$MINECRAFT_STATE_DIR/previous-release"
     switch_current "$target"
   fi
-  # Seed DiscordSRV's complete embedded defaults and heal its project-specific
-  # settings while the server is stopped, before its first plugin load. This
-  # also avoids editing its persistent config files while players are online.
-  DISCORDSRV_BOOTSTRAP_DEFAULTS=true "$SCRIPT_DIR/ensure-discordsrv-config.sh"
+  # Check the repository-rendered DiscordSRV configuration before plugin load.
+  "$SCRIPT_DIR/ensure-discordsrv-config.sh"
   if verify_release; then
     if [[ -f "$MINECRAFT_STATE_DIR/target-release" ]]; then
       # Pruning runs before current-release is written: if it fails (e.g.

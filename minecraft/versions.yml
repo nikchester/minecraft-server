@@ -36,8 +36,17 @@ plugins:
     source: "manual"
     data_dir: "DiscordSRV"
     download_url: "https://github.com/DiscordSRV/DiscordSRV/releases/download/v1.30.5/DiscordSRV-Build-1.30.5.jar"
+  onlysleep:
+    version: "1.4.2"
+    required: true
+    source: "modrinth"
+    data_dir: "Onlysleep"
+    download_url: "https://cdn.modrinth.com/data/Tr6srgFS/versions/X6Y39iU9/Onlysleep-1.4.2.jar"
+shared_plugin_data_dirs:
+  - "bStats"
 notes:
   production_gate: "Paper artifact URL was provided by the owner and should be used for smoke tests and release preparation."
   plugin_gate: "Plugin download URLs were resolved from the projects' own release APIs (GitHub for AuthMe, Modrinth for CoreProtect/Chunky/DynamicLights) at the exact pinned versions above; verify before bumping versions."
   dynamiclights_config: "DynamicLights' own config.yml (in shared/plugins/DynamicLights, not committed) must keep track_mobs: false so held light sources on mobs don't emit dynamic light; scripts/ensure-dynamiclights-config.sh self-heals this on every deploy cycle."
   authme_config: "AuthMe's own config.yml (in shared/plugins/AuthMe, not committed) must keep settings.restrictions.timeout: 60 and settings.restrictions.maxRegPerIp: 0 (issue #13); scripts/ensure-authme-config.sh self-heals both on every deploy cycle."
+  onlysleep_config: "Onlysleep 1.4.2 (issue #48) skips a night at 50% of eligible players per world, rounded up; player-facing messages are Russian, bStats and update checks are disabled. The shared bStats config directory is separately linked because bStats is global to the server, not an installable plugin."

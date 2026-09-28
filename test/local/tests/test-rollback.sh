@@ -46,7 +46,26 @@ test_rollback_without_previous_release_fails_hard() {
   assert_eq "ROLLBACK" "$(cat /srv/minecraft/state/deploy-state)" "(deploy-state)" || return 1
 }
 
+test_release_without_onlysleep_enable_evidence_rolls_back() {
+  reset_environment
+  prepare_release "rel1" || return 1
+  /opt/minecraft/bin/deploy.sh || return 1
+
+  prepare_release "rel2" || return 1
+  touch "/srv/minecraft/releases/rel2/.omit_onlysleep_enable_log"
+  DEPLOY_EMPTY_GRACE_SECONDS=1 /opt/minecraft/bin/deploy.sh \
+    >/tmp/deploy-missing-onlysleep-enable.log 2>&1 || true
+
+  assert_eq "ROLLED_BACK" "$(cat /srv/minecraft/state/deploy-state)" \
+    "(deploy state when Onlysleep did not enable)" || return 1
+  assert_eq "rel1" "$(readlink -f /srv/minecraft/current | xargs basename)" \
+    "(current release after Onlysleep load failure)" || return 1
+  assert_contains "$(cat /tmp/deploy-missing-onlysleep-enable.log)" \
+    "Onlysleep load evidence was not found" "(failure is recorded in the deploy log)" || return 1
+}
+
 reset_environment
 run_test "a release that fails verification rolls back to the previous one" test_failed_release_rolls_back
 run_test "a first deploy with no previous release fails hard, not silently or by hanging" test_rollback_without_previous_release_fails_hard
+run_test "a release without Onlysleep load evidence rolls back" test_release_without_onlysleep_enable_evidence_rolls_back
 report_and_exit

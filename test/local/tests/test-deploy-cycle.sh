@@ -13,6 +13,13 @@ test_first_deploy_succeeds() {
   assert_file_exists /srv/minecraft/shared/plugins/Chunky/config.yml || return 1
   assert_file_exists /srv/minecraft/shared/plugins/CoreProtect/config.yml || return 1
   assert_file_exists /srv/minecraft/shared/plugins/DynamicLights/config.yml || return 1
+  assert_file_exists /srv/minecraft/shared/plugins/Onlysleep/config.yml || return 1
+  assert_file_exists /srv/minecraft/shared/plugins/Onlysleep/messages.yml || return 1
+  assert_file_exists /srv/minecraft/shared/plugins/bStats/config.yml || return 1
+  assert_contains "$(cat /srv/minecraft/shared/plugins/Onlysleep/config.yml)" \
+    "sleep-percentage: 50" "(Onlysleep sleep threshold)" || return 1
+  assert_contains "$(cat /srv/minecraft/shared/plugins/bStats/config.yml)" \
+    "enabled: false" "(bStats opt-out)" || return 1
   assert_contains "$(cat /srv/minecraft/shared/plugins/AuthMe/config.yml)" \
     "mySQLPassword: 'test-authme-mysql-password'" "(rendered plugin secret)" || return 1
   if grep -R -q '{{[A-Z][A-Z0-9_]*}}' /srv/minecraft/releases/rel1/config /srv/minecraft/shared/plugins; then

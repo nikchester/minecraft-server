@@ -68,6 +68,48 @@ heal_restrictions_key() {
   sed -i "${lineno}s/^\([[:space:]]*\)${key}:.*/\1${key}: ${value}/" "$AUTHME_CONFIG"
 }
 
+find_settings_line() {
+  local key=$1
+  awk -v key="$key" '
+    {
+      line = $0
+      stripped = line
+      sub(/^[[:space:]]*/, "", stripped)
+      if (stripped ~ /^[A-Za-z_][A-Za-z0-9_]*:[[:space:]]*$/) {
+        indent = length(line) - length(stripped)
+        name = stripped
+        sub(/:.*/, "", name)
+        if (name == "settings") {
+          in_settings = 1
+          settings_indent = indent
+        } else if (in_settings && indent <= settings_indent) {
+          in_settings = 0
+        }
+        next
+      }
+      if (in_settings && stripped ~ ("^" key ":[[:space:]]*[^[:space:]#].*$")) {
+        indent = length(line) - length(stripped)
+        if (indent == settings_indent + 4) print NR
+      }
+    }
+  ' "$AUTHME_CONFIG"
+}
+
+heal_settings_key() {
+  local key=$1 value=$2 lineno current
+  lineno=$(find_settings_line "$key")
+  if [[ -z "$lineno" ]]; then
+    log "settings.${key} not found in ${AUTHME_CONFIG}; leaving as-is (unexpected config layout)"
+    return
+  fi
+  current=$(sed -n "${lineno}p" "$AUTHME_CONFIG")
+  if [[ "$current" =~ ^([[:space:]]*)${key}:[[:space:]]*${value}[[:space:]]*$ ]]; then
+    return
+  fi
+  log "forcing settings.${key}: ${value} in ${AUTHME_CONFIG}"
+  sed -i "${lineno}s/^\\([[:space:]]*\\)${key}:.*/\\1${key}: ${value}/" "$AUTHME_CONFIG"
+}
+
 ensure_authme_config() {
   if [[ ! -f "$AUTHME_CONFIG" ]]; then
     log "AuthMe config not present yet at ${AUTHME_CONFIG} (plugin has not started); nothing to heal"
@@ -76,6 +118,8 @@ ensure_authme_config() {
 
   heal_restrictions_key timeout 60
   heal_restrictions_key maxRegPerIp 0
+  heal_settings_key messagesLanguage ru
+  heal_settings_key serverName "The Tatarland Rebirth"
 }
 
 ensure_authme_config

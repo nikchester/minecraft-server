@@ -26,13 +26,33 @@ yaml_scalar() {
   ' "$VERSIONS_FILE"
 }
 
+yaml_plugin_url() {
+  local plugin=$1
+  awk -v plugin="$plugin" '
+    $0 == "  " plugin ":" { in_block=1; next }
+    in_block && /^  [^ ]/ { in_block=0 }
+    in_block && /^    download_url:/ {
+      sub(/^    download_url: */, "")
+      gsub(/"/, "")
+      print
+      exit
+    }
+  ' "$VERSIONS_FILE"
+}
+
 export JAVA_MAJOR
 JAVA_MAJOR=$(yaml_scalar java major)
 export PAPER_URL
 PAPER_URL=$(yaml_scalar paper download_url)
+export AUTHME_URL
+AUTHME_URL=$(yaml_plugin_url authme_reloaded)
 
 if [[ -z "$PAPER_URL" ]]; then
   echo "no paper.download_url in $VERSIONS_FILE" >&2
+  exit 1
+fi
+if [[ -z "$AUTHME_URL" ]]; then
+  echo "no plugins.authme_reloaded.download_url in $VERSIONS_FILE" >&2
   exit 1
 fi
 

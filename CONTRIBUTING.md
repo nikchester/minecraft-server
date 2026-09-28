@@ -1,5 +1,22 @@
 # Contributing
 
+## Change delivery
+
+1. Start each feature, bug fix, or other change on its own branch created from
+   the latest `dev`. Keep unrelated changes in separate branches and pull requests.
+2. Run the applicable checks locally (below). Open a pull request from the
+   change branch into `dev` only after local tests pass.
+3. Wait for the `dev` pull request's required CI checks and the repository
+   owner's approval before merging it into `dev`. Confirm the resulting `dev`
+   CI run succeeds as well.
+4. Only after `dev` is green, open a pull request from `dev` into `main`.
+   The repository owner reviews and approves this pull request manually before
+   it is merged. Do not merge to `main` or trigger production deployment on
+   the owner's behalf.
+
+Production deployment is tied to `main`; a successful local or `dev` test run
+does not by itself authorize a production rollout.
+
 ## Before opening a pull request
 
 Run the repository checks available in your environment:

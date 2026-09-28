@@ -152,6 +152,9 @@ case "$subcommand" in
     current_dir=${MINECRAFT_CURRENT_DIR:-/srv/minecraft/current}
     mkdir -p "${current_dir}/logs"
     printf '[stub] [AuthMe] AuthMe enabled (test stub, not real Paper)\n' >>"${current_dir}/logs/latest.log"
+    if [[ ! -f "${current_dir}/.omit_onlysleep_enable_log" ]]; then
+      printf '[stub] [Onlysleep] Enabling Onlysleep v1.4.2 (test stub, not real Paper)\n' >>"${current_dir}/logs/latest.log"
+    fi
     if [[ -f "${current_dir}/.force_fail" ]]; then
       # For testing deploy.sh's rollback path: a release with this marker
       # file intentionally never gets its stub launched, so the port-wait

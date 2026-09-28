@@ -6,6 +6,7 @@ services:
       args:
         JAVA_MAJOR: ${JAVA_MAJOR:-25}
         PAPER_URL: ${PAPER_URL:?set by run.sh from minecraft/versions.yml}
+        AUTHME_URL: ${AUTHME_URL:?set by run.sh from minecraft/versions.yml}
         DISCORDSRV_URL: ${DISCORDSRV_URL:-https://github.com/DiscordSRV/DiscordSRV/releases/download/v1.30.5/DiscordSRV-Build-1.30.5.jar}
     ports:
       - "25565:25565"

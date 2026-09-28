@@ -17,6 +17,8 @@ write_stock_authme_config() {
   mkdir -p "$(dirname "$AUTHME_CONFIG")"
   cat >"$AUTHME_CONFIG" <<'EOF'
 settings:
+    messagesLanguage: en
+    serverName: Your Minecraft Server
     restrictions:
         allowedNicknameCharacters: '[a-zA-Z0-9_]*'
         timeout: 30
@@ -45,6 +47,10 @@ test_heals_stock_config() {
   # and must be left untouched.
   assert_contains "$(grep -A2 'sessions:' "$AUTHME_CONFIG")" "timeout: 10" \
     "(settings.sessions.timeout must NOT be touched)" || return 1
+  assert_contains "$(grep -A2 '^settings:' "$AUTHME_CONFIG")" "messagesLanguage: ru" \
+    "(AuthMe player messages must use Russian)" || return 1
+  assert_contains "$(grep -A3 '^settings:' "$AUTHME_CONFIG")" "serverName: The Tatarland Rebirth" \
+    "(AuthMe welcome placeholder must use a Russian server name)" || return 1
 }
 
 test_re_heals_after_drift() {
@@ -55,13 +61,17 @@ test_re_heals_after_drift() {
   # A plugin update/reinstall on the VPS can regenerate stock defaults at
   # any time, not just at deploy -- the next unconditional deploy-timer
   # tick (a no-op deploy, no new release pending) must still re-heal it.
-  sed -i 's/timeout: 60/timeout: 30/; s/maxRegPerIp: 0/maxRegPerIp: 1/' "$AUTHME_CONFIG"
+  sed -i 's/timeout: 60/timeout: 30/; s/maxRegPerIp: 0/maxRegPerIp: 1/; s/messagesLanguage: ru/messagesLanguage: en/; s/serverName: The Tatarland Rebirth/serverName: Your Minecraft Server/' "$AUTHME_CONFIG"
   /opt/minecraft/bin/ensure-authme-config.sh || return 1
 
   assert_contains "$(grep -A3 'restrictions:' "$AUTHME_CONFIG")" "timeout: 60" \
     "(drifted settings.restrictions.timeout must be re-healed)" || return 1
   assert_contains "$(grep -A3 'restrictions:' "$AUTHME_CONFIG")" "maxRegPerIp: 0" \
     "(drifted settings.restrictions.maxRegPerIp must be re-healed)" || return 1
+  assert_contains "$(grep -A2 '^settings:' "$AUTHME_CONFIG")" "messagesLanguage: ru" \
+    "(drifted AuthMe language must be re-healed to Russian)" || return 1
+  assert_contains "$(grep -A3 '^settings:' "$AUTHME_CONFIG")" "serverName: The Tatarland Rebirth" \
+    "(drifted AuthMe server name must be re-healed to Russian)" || return 1
 }
 
 test_missing_config_is_a_noop() {
@@ -143,25 +153,54 @@ test_discordsrv_missing_config_is_a_noop() {
   fi
 }
 
-test_discordsrv_bootstraps_stock_defaults_before_first_start() {
+test_discordsrv_renders_repository_config_before_first_start() {
   reset_environment
-  mkdir -p /srv/minecraft/current/plugins
-  python3 - <<'PY'
-import zipfile
-with zipfile.ZipFile('/srv/minecraft/current/plugins/discordsrv-1.30.5.jar', 'w') as jar:
-    jar.writestr('config/en.yml', 'BotToken: "BOTTOKEN"\nChannels: {}\nOther default: preserved\n')
-    jar.writestr('voice/en.yml', 'Voice enabled: false\nVoice category:\nLobby channel:\nOther voice default: preserved\n')
-PY
-  write_fake_token_file
-  DISCORDSRV_BOOTSTRAP_DEFAULTS=true run_discordsrv_ensure || return 1
-  assert_contains "$(cat "$DISCORDSRV_CONFIG")" "BotToken: \"${FAKE_TOKEN}\"" \
-    "(token must be set before the first plugin start)" || return 1
-  assert_contains "$(cat "$DISCORDSRV_CONFIG")" 'Other default: preserved' \
-    "(other defaults from the plugin jar must be preserved)" || return 1
+  prepare_release first-start || return 1
+  assert_contains "$(cat "$DISCORDSRV_CONFIG")" 'BotToken: '\''test-discord-bot-token'\''' \
+    "(token must be rendered from the runtime secret)" || return 1
+  assert_contains "$(cat "$DISCORDSRV_CONFIG")" 'ConfigVersion: 1.30.5' \
+    "(complete versioned configuration must come from the repository)" || return 1
   assert_contains "$(cat "$DISCORDSRV_VOICE_CONFIG")" "Voice enabled: true" \
     "(voice must be enabled before first plugin start)" || return 1
-  assert_contains "$(cat "$DISCORDSRV_VOICE_CONFIG")" 'Other voice default: preserved' \
-    "(other voice defaults from the plugin jar must be preserved)" || return 1
+  assert_contains "$(cat "$DISCORDSRV_VOICE_CONFIG")" 'Vertical Strength: 40' \
+    "(voice settings must come from the repository)" || return 1
+  python3 - "$DISCORDSRV_CONFIG" "$DISCORDSRV_VOICE_CONFIG" <<'PY'
+import sys
+import yaml
+
+config, voice = (yaml.safe_load(open(path, encoding="utf-8")) for path in sys.argv[1:])
+assert config["BotToken"] == "test-discord-bot-token"
+assert config["ConfigVersion"] == "1.30.5"
+assert config["Channels"]["global"] == "1551597801933242418"
+assert voice["Network"]["Vertical Strength"] == 40
+PY
+  local name
+  for name in alerts linking synchronization messages; do
+    if [[ ! -s "/srv/minecraft/shared/plugins/DiscordSRV/${name}.yml" ]]; then
+      echo "  ASSERT FAILED: repository config ${name}.yml was not rendered" >&2
+      return 1
+    fi
+  done
+  printf '%s' 'test-discord-bot-token' >"$FAKE_TOKEN_FILE"
+  DISCORD_BOT_TOKEN_FILE="$FAKE_TOKEN_FILE" \
+    /opt/minecraft/bin/ensure-discordsrv-config.sh || return 1
+  assert_contains "$(cat "$DISCORDSRV_CONFIG")" "BotToken: 'test-discord-bot-token'" \
+    '(periodic healing must not rewrite correctly rendered secrets)' || return 1
+}
+
+test_discordsrv_secret_is_required_for_preparation() {
+  reset_environment
+  local output
+  if output=$(cd /opt/test/repo && env -u DISCORD_BOT_TOKEN \
+    /opt/minecraft/bin/prepare-release.sh no-token 2>&1); then
+    echo '  ASSERT FAILED: preparation must reject missing Discord bot token' >&2
+    return 1
+  fi
+  assert_contains "$output" 'missing secret DISCORD_BOT_TOKEN' || return 1
+  if [[ -e "$DISCORDSRV_CONFIG" ]]; then
+    echo '  ASSERT FAILED: failed rendering must not create a placeholder config' >&2
+    return 1
+  fi
 }
 
 test_discordsrv_nonsecret_settings_heal_without_token() {
@@ -184,6 +223,7 @@ run_test "AuthMe config heal re-applies if it drifts back to defaults" test_re_h
 run_test "missing AuthMe config (plugin never started) is a no-op, not a failure" test_missing_config_is_a_noop
 run_test "DiscordSRV runtime settings heal stock and drifted configs" test_discordsrv_heals_stock_and_drifted_configuration
 run_test "missing plugin configuration remains a no-op before first start" test_discordsrv_missing_config_is_a_noop
-run_test "first-start configuration keeps defaults and applies runtime settings" test_discordsrv_bootstraps_stock_defaults_before_first_start
+run_test "first-start DiscordSRV configuration renders from Git" test_discordsrv_renders_repository_config_before_first_start
+run_test "release preparation fails without DiscordSRV secret" test_discordsrv_secret_is_required_for_preparation
 run_test "non-secret runtime settings heal without a bot-token secret" test_discordsrv_nonsecret_settings_heal_without_token
 report_and_exit

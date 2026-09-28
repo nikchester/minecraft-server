@@ -23,7 +23,7 @@ import sys
 
 lines = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace").splitlines()
 for line in lines[-60:]:
-    for name in ("RCON_PASSWORD", "MANAGEMENT_SERVER_SECRET", "AUTHME_MYSQL_PASSWORD"):
+    for name in ("RCON_PASSWORD", "MANAGEMENT_SERVER_SECRET", "AUTHME_MYSQL_PASSWORD", "DISCORD_BOT_TOKEN"):
         secret = os.environ.get(name, "")
         if secret:
             line = line.replace(secret, "[REDACTED]")
@@ -32,19 +32,8 @@ PY
 }
 
 echo "Preparing release ${release_id} from pinned repository versions..."
-/opt/minecraft/bin/prepare-release.sh "$release_id"
-
-# Bootstrap DiscordSRV's config from the pinned jar, but deliberately remove
-# its token in this isolated smoke: CI proves Paper can enable the plugin and
-# never attempts a real Discord login or requires credentials.
-DISCORDSRV_BOOTSTRAP_DEFAULTS=true \
-DISCORD_BOT_TOKEN_FILE=/nonexistent/ci-discord-bot-token \
-MINECRAFT_CURRENT_DIR="$release_dir" \
-DISCORDSRV_CONFIG="$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/config.yml" \
-DISCORDSRV_VOICE_CONFIG="$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/voice.yml" \
-  /opt/minecraft/bin/ensure-discordsrv-config.sh
-sed -i 's/^BotToken:.*/BotToken: ""/' \
-  "$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/config.yml"
+ARTIFACT_DOWNLOAD_MAX_TIME_SECONDS=${PAPER_ARTIFACT_DOWNLOAD_TIMEOUT_SECONDS:-600} \
+  /opt/minecraft/bin/prepare-release.sh "$release_id"
 
 python3 - "$release_dir" <<'PY'
 import os
@@ -72,7 +61,36 @@ for name, rendered in checks.items():
         print(f"FAIL: {name} was not rendered from the smoke environment.", file=sys.stderr)
         raise SystemExit(1)
     print(f"PASS: {name} reached the rendered runtime configuration.")
+
+spigot = yaml.safe_load((release / "spigot.yml").read_text(encoding="utf-8"))
+bukkit = yaml.safe_load((release / "bukkit.yml").read_text(encoding="utf-8"))
+world = spigot["world-settings"]["default"]
+if (world["mob-spawn-range"] != 6 or world["entity-activation-range"]["monsters"] != 24
+        or world["entity-tracking-range"]["animals"] != 48
+        or bukkit["spawn-limits"]["monsters"] != 50
+        or bukkit["ticks-per"]["monster-spawns"] != 2):
+    print("FAIL: mob tuning was not rendered from Git.", file=sys.stderr)
+    raise SystemExit(1)
+print("PASS: spigot.yml and bukkit.yml contain the repository mob tuning.")
+
+discord = pathlib.Path("/srv/minecraft/shared/plugins/DiscordSRV")
+expected = {"config.yml", "voice.yml", "alerts.yml", "linking.yml", "synchronization.yml", "messages.yml"}
+for name in expected:
+    path = discord / name
+    if not path.is_file() or "{{" in path.read_text(encoding="utf-8"):
+        print(f"FAIL: {name} missing or has unresolved markers.", file=sys.stderr)
+        raise SystemExit(1)
+    yaml.safe_load(path.read_text(encoding="utf-8"))
+config = yaml.safe_load((discord / "config.yml").read_text(encoding="utf-8"))
+if config.get("BotToken") != os.environ.get("DISCORD_BOT_TOKEN"):
+    print("FAIL: DiscordSRV bot token was not rendered.", file=sys.stderr)
+    raise SystemExit(1)
+print("PASS: all six DiscordSRV configs rendered before Paper startup.")
 PY
+
+# Keep this isolated smoke offline from Discord; no real bot login is needed.
+sed -i 's/^BotToken:.*/BotToken: ""/' \
+  "$MINECRAFT_SHARED_DIR/plugins/DiscordSRV/config.yml"
 
 echo "Starting the real Paper server and downloaded plugin JARs..."
 cd "$release_dir"
@@ -101,6 +119,7 @@ if ! grep -Fq 'Done (' "$log_file"; then
 fi
 
 python3 - "$release_dir" "$log_file" <<'PY'
+import os
 import pathlib
 import sys
 import zipfile
@@ -115,6 +134,29 @@ versions = yaml.safe_load(
 plugins = versions.get("plugins") or {}
 enabled = []
 failures = []
+
+shared = pathlib.Path(os.environ.get("MINECRAFT_SHARED_DIR", "/srv/minecraft/shared"))
+onlysleep_config = yaml.safe_load(
+    (shared / "plugins/Onlysleep/config.yml").read_text(encoding="utf-8")
+)
+onlysleep_messages = yaml.safe_load(
+    (shared / "plugins/Onlysleep/messages.yml").read_text(encoding="utf-8")
+)
+bstats_config = yaml.safe_load(
+    (shared / "plugins/bStats/config.yml").read_text(encoding="utf-8")
+)
+if onlysleep_config.get("sleep-percentage") != 50:
+    failures.append("Onlysleep: expected a 50% sleep threshold")
+if onlysleep_config.get("per-world-sleep") is not True:
+    failures.append("Onlysleep: expected sleep counts to be per-world")
+if onlysleep_config.get("check-for-updates") is not False:
+    failures.append("Onlysleep: automatic update checks must be disabled")
+if onlysleep_messages.get("sleep", {}).get("start-sleep", "").find("лёг спать") < 0:
+    failures.append("Onlysleep: Russian sleep notification was not rendered")
+if onlysleep_messages.get("sleep", {}).get("progress-bar", "").find("Игроки спят") < 0:
+    failures.append("Onlysleep: Russian progress notification was not rendered")
+if bstats_config.get("enabled") is not False:
+    failures.append("bStats: telemetry must be disabled")
 
 for key, config in plugins.items():
     if not config.get("download_url"):

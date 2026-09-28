@@ -1,5 +1,5 @@
-Welcome {PLAYER} on {SERVER} server
+Добро пожаловать, {PLAYER}, на сервер {SERVER}!
 
-This server uses AuthMeReloaded protection!
+На сервере включена защита AuthMeReloaded!
 
-Join our Discord: https://discord.gg/64FzXfX68q
+Присоединяйтесь к нашему Discord: https://discord.gg/64FzXfX68q

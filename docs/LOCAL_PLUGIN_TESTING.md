@@ -13,10 +13,12 @@ configured production plugin in a second throwaway container. This startup
 check confirms local compatibility but does not authenticate to Discord or
 exercise live chat/voice behavior.
 
-`test/paper-local` adds the live integration layer: it runs Paper and DiscordSRV
-in a throwaway Docker container so you can provide a test bot, connect a client,
-and verify Discord chat and proximity voice. It does not touch `systemd` or the
-production VPS. CI runs `bash test/local/run-all.sh` on pull requests and
+`test/paper-local` adds the live integration layer: it runs Paper, AuthMe, and
+DiscordSRV in a throwaway Docker container so you can provide a test bot,
+connect a client, and verify AuthMe messages, Discord chat, and proximity
+voice. The AuthMe welcome text is copied from
+`minecraft/plugins/AuthMe/welcome.txt` into the image. It does not touch
+`systemd` or the production VPS. CI runs `bash test/local/run-all.sh` on pull requests and
 pushes to `main`/`dev`; that job starts every configured plugin without a bot
 token and does not connect to Discord.
 
@@ -31,10 +33,10 @@ token and does not connect to Discord.
 ./test/paper-local/run.sh
 ```
 
-This reads `paper.download_url` and `java.major` out of
-`minecraft/versions.yml` (so the local test always matches the pinned
-production Paper build), downloads the pinned DiscordSRV release jar, and
-starts the server in the foreground with port `25565` published to
+This reads the Paper, Java, and AuthMe download settings out of
+`minecraft/versions.yml` (so the local test uses the pinned production
+artifacts), downloads the pinned DiscordSRV release jar, and starts the server
+in the foreground with port `25565` published to
 `localhost`. Stop it with Ctrl-C; `docker compose -f
 test/paper-local/docker-compose.yml down` cleans up afterward.
 
@@ -146,6 +148,27 @@ starts a fresh one and re-applies it. It's local-only, like everything else
 in this directory: nothing here is copied into a production release.
 
 ## Production configuration
+
+### Onlysleep (issue #48)
+
+Onlysleep 1.4.2 is pinned in `minecraft/versions.yml`; the real Paper/plugin
+smoke test verifies its JAR metadata, that Paper enables it, and that the
+committed 50% per-world threshold, Russian player messages, disabled update
+checks, and bStats opt-out are present in the runtime configuration. A release
+containing the Onlysleep JAR is rejected and rolled back unless Paper's logs
+show that it enabled successfully. Older rollback releases without the JAR
+remain verifiable.
+
+Before closing issue #48, also verify the gameplay behavior on a test server
+with Minecraft clients:
+
+1. With one eligible player online, sleep in a bed and confirm the night is
+   skipped after the configured 3-second delay, with Russian notifications.
+2. With three eligible players in one world, have one player sleep and confirm
+   the night continues and progress shows `1/2`; have a second player sleep
+   and confirm the night is skipped and progress showed `2/2`.
+3. Confirm a player in another world does not change the threshold, and rain
+   or a thunderstorm is cleared after a successful skip.
 
 Unlike SoundWave (previous candidate, see issue #20 history), DiscordSRV
 ships ordinary GitHub Releases that `curl` fine, so adding it to

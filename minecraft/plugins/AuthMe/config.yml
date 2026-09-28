@@ -111,7 +111,7 @@ settings:
         timeout: 10
     # Message language, available languages:
     # https://github.com/AuthMe/AuthMeReloaded/blob/master/docs/translations.md
-    messagesLanguage: en
+    messagesLanguage: ru
     # Forces authme to hook into Vault instead of a specific permission handler system.
     forceVaultHook: false
     # Log level: INFO, FINE, DEBUG. Use INFO for general messages,
@@ -122,7 +122,7 @@ settings:
     # typical communication with the database to happen synchronously, set this to false
     useAsyncTasks: true
     # The name of the server, used in some placeholders.
-    serverName: Your Minecraft Server
+    serverName: The Tatarland Rebirth
     restrictions:
         # Can not authenticated players chat?
         # Keep in mind that this feature also blocks all commands not

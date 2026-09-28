@@ -42,6 +42,7 @@ PY
 
 download_artifact() {
   local url=$1 destination=$2 attempt=1 max_attempts=4
+  local max_time=${ARTIFACT_DOWNLOAD_MAX_TIME_SECONDS:-180}
   local temporary_file="${destination}.part.$$" http_status curl_status retryable delay
   local -a retry_delays=(2 4 8)
 
@@ -50,7 +51,7 @@ download_artifact() {
     http_status=""
     curl_status=0
     if http_status=$(curl --silent --show-error --location \
-      --connect-timeout 20 --max-time 180 \
+      --connect-timeout 20 --max-time "$max_time" \
       --output "$temporary_file" --write-out '%{http_code}' "$url"); then
       curl_status=0
     else
@@ -93,6 +94,17 @@ import yaml
 data = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
 for key in (data.get("plugins") or {}):
     print(key)
+PY
+}
+
+list_shared_plugin_data_dirs() {
+  python3 - "$VERSION_FILE" <<'PY'
+import sys
+import yaml
+
+data = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+for path in data.get("shared_plugin_data_dirs", []) or []:
+    print(path)
 PY
 }
 
@@ -155,6 +167,19 @@ link_shared_state() {
     ln -sfnT "$MINECRAFT_SHARED_DIR/plugins/$data_dir" "$RELEASE_DIR/plugins/$data_dir"
   done < <(list_plugin_keys)
 
+  # Some plugins share server-wide state instead of owning a dedicated
+  # directory (for example bStats' opt-out config). Keep these paths explicit
+  # in versions.yml and link them with the same persistence/rendering rules.
+  local shared_data_dir
+  while IFS= read -r shared_data_dir; do
+    [[ -n "$shared_data_dir" ]] || continue
+    mkdir -p "$MINECRAFT_SHARED_DIR/plugins/$shared_data_dir"
+    render_config_tree "$PWD/minecraft/plugins/$shared_data_dir" \
+      "$MINECRAFT_SHARED_DIR/plugins/$shared_data_dir"
+    ln -sfnT "$MINECRAFT_SHARED_DIR/plugins/$shared_data_dir" \
+      "$RELEASE_DIR/plugins/$shared_data_dir"
+  done < <(list_shared_plugin_data_dirs)
+
   chown -R minecraft:minecraft "$MINECRAFT_SHARED_DIR"
 }
 
@@ -175,6 +200,12 @@ prepare() {
   "$SCRIPT_DIR/render-config.py" \
     --source minecraft/server.properties \
     --output "$RELEASE_DIR/server.properties"
+  local config_name
+  for config_name in spigot.yml bukkit.yml; do
+    "$SCRIPT_DIR/render-config.py" \
+      --source "minecraft/$config_name" \
+      --output "$RELEASE_DIR/$config_name"
+  done
   render_config_tree "$PWD/minecraft/config" "$RELEASE_DIR/config"
   cp -a minecraft/server-icon.png "$RELEASE_DIR/server-icon.png"
   # Paper refuses to start at all without this; operating this server at

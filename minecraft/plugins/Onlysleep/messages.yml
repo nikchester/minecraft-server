@@ -1,0 +1,71 @@
+prefix: "&8[&bСон&8] &r"
+
+sleep:
+  start-sleep: "&a%player% &eлёг спать... &7(&b%count%&7/&b%required%&7)"
+  enough-sleeping: "&aДоброе утро! Ночь пропущена благодаря игроку &b%player%"
+  already-day: "&cСпать можно только ночью или во время грозы."
+  not-safe: "&cСейчас нельзя спать: рядом монстры."
+  not-required: "&eСейчас никому не нужно ложиться спать."
+  cancelled: "&c%player% &eперестал спать. Пропуск ночи отменён."
+  progress-bar: "&bИгроки спят... &7%bar% &7(&b%count%&7/&b%required%&7)"
+  world-disabled: "&cПропуск ночи отключён в этом мире."
+  already-skipping: "&eНочь уже пропускается!"
+
+weather:
+  clearing: "&aГроза рассеялась благодаря игроку &b%player%"
+
+boss-bar:
+  title: "&bНочь пропускается благодаря игроку &f%player%"
+
+command:
+  no-permission: "&cУ вас недостаточно прав для этой команды."
+  reload-success: "&aНастройки успешно перезагружены!"
+  reload-fail: "&cНе удалось перезагрузить настройки. Подробности в консоли."
+  set-success: "&aПараметр &b%key% &aизменён на &b%value%&a!"
+  set-fail: "&cНе удалось изменить параметр %key%: %error%"
+  get-success: "&7%key% &8= &b%value%"
+  get-fail: "&cНеизвестный параметр «%key%»."
+  world-enabled: "&aПропуск ночи включён в мире &b%world%"
+  world-disabled: "&cПропуск ночи отключён в мире &b%world%"
+  gamemode-enabled: "&aПропуск ночи разрешён для режима &b%gamemode%"
+  gamemode-disabled: "&cПропуск ночи запрещён для режима &b%gamemode%"
+  dump-success: "&aОтладочные данные сохранены: &b%file% &7(%size% КБ)"
+  dump-fail: "&cНе удалось создать отладочные данные: %error%"
+  dump-uploading: "&eОтправка отладочных данных..."
+  dump-uploaded: "&aОтладочные данные отправлены: &b%url%"
+  dump-preview: "&7--- Предпросмотр отладочных данных ---"
+  info:
+    header: "&8=== &bOnlysleep v%version% &8==="
+    version: "&7Версия: &b%version%"
+    author: "&7Автор: &b%author%"
+    status-enabled: "&7Состояние: &aвключён &7| &b%platform%"
+    sleep-pct: "&7Порог сна: &b%percent%%"
+    platform: "&7Платформа: &b%platform%"
+    links-header: "&8--- &bСсылки &8---"
+    link-modrinth: "&8» &7Modrinth: &bhttps://modrinth.com/plugin/onlysleep"
+    link-github: "&8» &7GitHub: &bhttps://github.com/DemonZ-Development/Onlysleep"
+    link-website: "&8» &7Сайт: &bhttps://demonz.org"
+    link-discord: "&8» &7Discord: &bhttps://discord.gg/qkvkEaPryF"
+    footer: "&8============================"
+
+update:
+  checking: "&eПроверка обновлений..."
+  available: "&eДоступна новая версия: &b%new% &e(установлена: &7%current%&e)"
+  available-links: "&8» &7Скачать: &bhttps://modrinth.com/plugin/onlysleep"
+  current: "&aУстановлена последняя версия."
+  check-fail: "&cНе удалось проверить обновления."
+
+help:
+  header: "&8=== &bКоманды Onlysleep &8==="
+  reload: "&7/%cmd% reload &8— &bПерезагрузить настройки"
+  info: "&7/%cmd% info &8— &bИнформация о плагине"
+  status: "&7/%cmd% status &8— &bСостояние плагина"
+  update: "&7/%cmd% update &8— &bПроверить обновления"
+  set: "&7/%cmd% set <параметр> <значение> &8— &bИзменить настройку"
+  get: "&7/%cmd% get <параметр> &8— &bПосмотреть настройку"
+  toggle: "&7/%cmd% toggle <параметр> &8— &bПереключить настройку"
+  world: "&7/%cmd% world <enable|disable|list> [мир] &8— &bНастройки миров"
+  gamemode: "&7/%cmd% gamemode <enable|disable|list> [режим] &8— &bНастройки режимов"
+  dump: "&7/%cmd% dump [paste] &8— &bСоздать отладочные данные"
+  help: "&7/%cmd% help &8— &bСправка по командам"
+  footer: "&8========================"
