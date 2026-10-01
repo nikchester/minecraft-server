@@ -6,6 +6,7 @@ Required plugins for v1:
 
 - AuthMeReloaded — its committed `config.yml` keeps `settings.restrictions.timeout: 60` and `settings.restrictions.maxRegPerIp: 0`; release preparation renders it into persistent plugin data, and `scripts/ensure-authme-config.sh` also checks these settings on deploy ticks.
 - CoreProtect
+- SkinsRestorer — players can use `/skin set <licensed-account-name>` to copy a Minecraft account's skin; `/skin clear` restores their account skin. Its first start generates the plugin's default configuration in persistent plugin data. See the [SkinsRestorer player guide](https://skinsrestorer.net/docs/features/change-skin).
 - Onlysleep — the pinned 1.4.2 build skips the night once 50% of eligible players in that world are sleeping (rounded up). Its settings and Russian player-facing messages are committed under `Onlysleep/`; the shared bStats config opts out of metrics.
 
 Optional administrative plugin:

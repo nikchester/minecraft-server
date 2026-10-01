@@ -60,6 +60,8 @@ function Start-Server {
     Invoke-Compose exec -T paper /opt/minecraft/bin/rcon-command.py 'worldborder center 0 0'
     Invoke-Compose exec -T paper /opt/minecraft/bin/rcon-command.py 'worldborder set 256'
     Invoke-Compose exec -T paper /opt/minecraft/bin/rcon-command.py 'whitelist on'
+    # Seed the staging whitelist on every start without replacing manually added players.
+    Invoke-Compose exec -T paper /opt/minecraft/bin/rcon-command.py 'whitelist add Chest3rf1eld'
     "Staging is available at $($config['STAGING_BIND_IP']):25566 (LAN only)."
 }
 
