@@ -1,11 +1,10 @@
 name: Deploy
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
 
 permissions:
   contents: read
@@ -14,15 +13,13 @@ jobs:
   deploy:
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'main')
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
       - name: Preflight production secrets and configs
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -165,11 +162,11 @@ jobs:
         with:
           config-name: release-drafter.yml
           version: 1.0.0
-          commitish: ${{ github.event.workflow_run.head_sha || github.sha }}
+          commitish: ${{ github.sha }}
 
       - name: Draft next SemVer release
         if: steps.baseline.outputs.initial == 'false'
         uses: release-drafter/release-drafter@v7
         with:
           config-name: release-drafter.yml
-          commitish: ${{ github.event.workflow_run.head_sha || github.sha }}
+          commitish: ${{ github.sha }}
