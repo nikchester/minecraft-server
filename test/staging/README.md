@@ -34,8 +34,6 @@ and AuthMe are enabled. Because the repository deliberately uses
 `online-mode=false`, users should choose a distinct password for staging AuthMe
 and never use a production account password here. To remove a player, use the
 in-game console command `whitelist remove <name>` through an admin or RCON.
-`Chest3rf1eld` is added to the whitelist automatically on every start; this
-does not remove any other players already on the list.
 
 The first start downloads the pinned JARs and creates a fresh world; it can
 take several minutes and needs internet access. The starter waits for Paper
@@ -73,10 +71,9 @@ The reset command preserves the host backup directory.
 ## Acceptance checks
 
 - `start` reports the LAN address and `worldborder get` over RCON reports 256.
-- `Chest3rf1eld` is already on the whitelist after `start`; an unlisted name is rejected.
 - A whitelisted player connects from a second computer, places a block and
   disconnects; after `stop` and `start`, the block and location remain.
-- Only TCP 25566 is published by Compose.
+- An unlisted name is rejected. Only TCP 25566 is published by Compose.
 - After `backup` / `update` / `rollback`, check `status` and the world contents.
 - `stop` leaves no running staging container; reboot Docker Desktop and confirm
   it stays stopped until another explicit `start`.
