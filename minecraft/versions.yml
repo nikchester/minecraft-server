@@ -1,7 +1,7 @@
 minecraft:
-  version: "1.21.8"
+  version: "26.2"
 paper:
-  build: 60
+  build: 124
   download_url: "https://fill-data.papermc.io/v1/objects/274bbcb9807ad79a479617ce695a7c0686e652a8d1cabfd0e288d92a3ea29593/paper-26.2-124.jar"
 java:
   major: 25
