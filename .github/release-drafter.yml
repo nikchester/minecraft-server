@@ -7,6 +7,9 @@ sort-by: merged_at
 sort-direction: ascending
 
 categories:
+  - type: pre-exclude
+    when:
+      label: 'skip-changelog'
   - title: '🛠️ Надёжность и инфраструктура'
     exclusive: true
     when:
@@ -43,13 +46,7 @@ categories:
 template: |
   # 🎉 The Tatarland Rebirth — релиз $RESOLVED_VERSION
 
-  Первый стабильный релиз сервера! В этом выпуске собраны игровые возможности и улучшения надёжности.
-
-  ## 🎮 Для игроков
-
-  $CHANGES
-
-  ## 🛠️ Надёжность и инфраструктура
+  Изменения, вошедшие в этот выпуск после предыдущей стабильной версии:
 
   $CHANGES
 
