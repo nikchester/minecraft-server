@@ -66,6 +66,20 @@ authentication and chat/voice behavior remain manual verification in
 
 ## Release notes
 
+Release Drafter renders each pull request's title and number in the changelog;
+the PR description is not included by the current template. Give each PR a
+concise, user-facing title that describes the change. Use the description for
+context, implementation details, and issue links. Apply the appropriate
+`release:major`, `release:minor`, or `release:patch` label to select the SemVer
+increment. Use `area:infrastructure` to categorize operational, CI, or
+documentation changes.
+
+For administrative-only PRs that promote `dev` to `main` without introducing a
+separate user-facing change, apply `skip-changelog`. Release Drafter excludes
+that PR from both the release notes and version calculation. Do not use this
+label for implementation changes merely because they are internal; use it only
+when the PR itself is bookkeeping or branch promotion.
+
 After a successful production deployment, GitHub Actions creates or updates the
 current GitHub Release draft. Before publishing it, the repository owner must
 compare the draft with the previous published stable release and ensure that it
