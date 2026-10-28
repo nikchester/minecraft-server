@@ -15,7 +15,11 @@ The main pain points are manual server maintenance, unsafe updates, weak backup 
 
 ### 1.2 Solution Summary
 
-Build a one-VPS Minecraft infrastructure managed from a public GitHub repository. Paper runs directly as a native Java process under systemd on Debian 13. Ansible provisions the host. GitHub Actions validates changes, runs smoke tests, and triggers approved deployments. Deployments wait for the server to become empty, create a mandatory pre-deploy backup, verify health, and roll back binaries/configuration on failure. Backups use encrypted restic repositories uploaded to Yandex Disk through rclone. Monitoring uses systemd timers, Minecraft status ping checks, Telegram alerts, and Healthchecks.io.
+Build a one-VPS Minecraft infrastructure managed from a public GitHub repository. Paper runs directly as a native Java process under systemd on Debian 13. Ansible provisions the host. GitHub Actions validates changes, runs smoke tests, and triggers approved deployments. Deployments wait for the server to become empty, create a mandatory pre-deploy backup, verify health, and roll back binaries/configuration on failure. Backups use encrypted restic repositories uploaded to Google Drive through rclone. Monitoring uses systemd timers, Minecraft status ping checks, Telegram alerts, and Healthchecks.io.
+
+Backup provider updated 2026-10-28: Google Drive is current. The legacy production
+secret `YANDEX_RCLONE_CONFIG` holds the sole Google remote. Old Yandex snapshots
+remain separate and were not migrated; see `docs/BACKUP_RESTORE.md`.
 
 ### 1.3 Success Metrics
 
@@ -55,7 +59,7 @@ Build a one-VPS Minecraft infrastructure managed from a public GitHub repository
 1. **Play vanilla-like survival**: players join a private whitelisted server and authenticate with AuthMe.
 2. **Deploy configuration or version changes safely**: owner merges tested changes, approves production, and deployment waits until no players are online.
 3. **Recover from failed deployment**: deployment health checks fail, previous release is restored, and owner receives a Telegram alert.
-4. **Recover from VPS loss**: owner provisions a new Debian 13 VPS, applies Ansible, restores mutable state from Yandex Disk backups, and updates DNS if needed.
+4. **Recover from VPS loss**: owner provisions a new Debian 13 VPS, applies Ansible, restores mutable state from Google Drive backups, and updates DNS if needed.
 5. **Audit or repair griefing/accidents**: owner uses CoreProtect records and restic backups depending on severity.
 
 ### 2.3 Primary User Journey
@@ -92,7 +96,7 @@ Owner changes config
 | Whitelist | Restrict access to approved Minecraft identities. | P0 | `white-list=true` and `enforce-whitelist=true` are configured. |
 | CoreProtect | Record player actions for audit and rollback. | P0 | CoreProtect SQLite data is retained about 30 days and backed up. |
 | RCON automation | Enable local-only RCON for scripts. | P0 | RCON listens on localhost only and firewall does not expose it. |
-| Backups | Create encrypted restic backups through rclone to Yandex Disk. | P0 | Scheduled backup succeeds; pre-deploy backup blocks deploy on failure. |
+| Backups | Create encrypted restic backups through rclone to Google Drive. | P0 | Scheduled backup succeeds; pre-deploy backup blocks deploy on failure. |
 | Player-aware deployment | Deploy only after the server is empty for 5 minutes. | P0 | Online players are never automatically kicked during normal deploy. |
 | Release rollback | Roll back binaries/configuration after failed normal deploy. | P0 | Previous release starts and passes health verification. |
 | Telegram alerts | Notify owner about critical and warning states. | P0 | Failed deploy, failed backup, missing backup, and service failure alert. |
@@ -124,7 +128,7 @@ GitHub repository
   -> SSH to Debian 13 VPS
   -> systemd-managed Paper server
   -> restic encrypted backups
-  -> rclone to Yandex Disk
+  -> rclone to Google Drive
   -> Healthchecks.io and Telegram alerts
 ```
 
@@ -174,7 +178,7 @@ PlayerIdentity
 | RCON localhost | `save-all flush`, `say`, `stop`, player count, admin commands. | Local secret |
 | Minecraft TCP 25565 | Player access and status ping checks. | Whitelist + AuthMe |
 | GitHub Actions | CI, deployment approval, force deploy, restore workflow. | GitHub auth + Environment approval |
-| Yandex Disk via rclone | Offsite backup storage. | rclone credentials in GitHub Secrets |
+| Google Drive via rclone | Offsite backup storage. | rclone credentials in GitHub Secrets |
 | Healthchecks.io | External heartbeat and backup watchdog. | Secret URLs/tokens |
 | Telegram Bot API | Owner notifications. | Bot token and chat ID |
 
@@ -182,7 +186,7 @@ PlayerIdentity
 
 - Git is the source of truth for infrastructure code, scripts, workflows, systemd units, Minecraft configuration, plugin manifests, and version metadata.
 - The VPS filesystem is the source of truth for live mutable state until it is backed up.
-- Yandex Disk restic repository is the offsite source for disaster recovery snapshots.
+- Google Drive restic repository is the offsite source for current disaster recovery snapshots.
 - GitHub Secrets / GitHub Environment hold pre-provisioned deployment and backup secrets.
 - Deployment state is persisted on disk so reboot does not lose deploy context.
 
@@ -195,7 +199,7 @@ PlayerIdentity
 | Runtime | Native Java + systemd | Simple and resource-efficient for one VPS. |
 | Provisioning | Ansible | Idempotent server configuration from Git. |
 | CI/CD | GitHub Actions | Fits public repo and Environment approvals. |
-| Backups | restic + rclone | Encrypted backups to Yandex Disk. |
+| Backups | restic + rclone | Encrypted backups to Google Drive. |
 | Monitoring | systemd timers, scripts, Healthchecks.io, Telegram | Lightweight enough for 4 GB RAM VPS. |
 | Data store | Files and SQLite plugin data | Avoids unnecessary external databases. |
 
@@ -248,7 +252,7 @@ No custom web UI exists in v1. GitHub, Telegram, and Minecraft clients provide t
 |--------|---------|----------|-------|
 | GitHub | Repository, CI/CD, secrets, deployment approval. | Git/HTTPS/SSH | Owner |
 | VPS provider | Provides already-created Debian 13 server. | SSH | Owner/provider |
-| Yandex Disk | Offsite backup storage. | rclone remote | Owner/provider |
+| Google Drive | Offsite backup storage. | rclone remote | Owner/provider |
 | Healthchecks.io | External heartbeat and backup monitoring. | HTTPS | Vendor |
 | Telegram | Alerts. | Bot API HTTPS | Telegram/vendor |
 | PaperMC API | Download pinned Paper build and check Paper updates. | HTTPS | PaperMC |
@@ -258,7 +262,7 @@ No custom web UI exists in v1. GitHub, Telegram, and Minecraft clients provide t
 
 ```text
 GitHub repo -> GitHub Actions -> SSH -> VPS
-VPS mutable state -> restic -> rclone -> Yandex Disk
+VPS mutable state -> restic -> rclone -> Google Drive
 VPS timers -> Healthchecks.io -> Telegram
 VPS scripts -> Telegram Bot API -> owner
 Minecraft clients -> TCP 25565 -> Paper server
@@ -270,7 +274,7 @@ Minecraft clients -> TCP 25565 -> Paper server
 |------------|--------------|-------------------|
 | GitHub Actions | CI/deploy runner unavailable | No deployment; owner retries later. |
 | GitHub Secrets | Missing or wrong secret | Workflow fails before unsafe operation where possible. |
-| Yandex Disk/rclone | Backup upload fails | Backup fails, deploy blocked if pre-deploy, owner alerted. |
+| Google Drive/rclone | Backup upload fails | Backup fails, deploy blocked if pre-deploy, owner alerted. |
 | Healthchecks.io | Monitoring service unavailable | Local health checks still run; owner may not receive external outage alert. |
 | Telegram | Alert delivery fails | Log alert failure locally and in workflow output. |
 | Paper/plugin download source | Artifact unavailable | CI/update workflow fails; production remains unchanged. |
@@ -337,7 +341,7 @@ Minecraft clients -> TCP 25565 -> Paper server
 |-----------|---------------|------------|-----------|
 | RCON password | Secret | GitHub Secrets; restrictive file permissions on VPS. | Rotate manually as needed. |
 | restic password | Secret | GitHub Secrets only. | Rotate manually with documented procedure. |
-| rclone/Yandex credentials | Secret | GitHub Secrets only. | Rotate manually as needed. |
+| rclone/Google Drive credentials | Secret | GitHub Secrets only (legacy name `YANDEX_RCLONE_CONFIG`). | Rotate manually as needed. |
 | Telegram token/chat ID | Secret | GitHub Secrets only. | Rotate if exposed. |
 | AuthMe data | Sensitive player data | In encrypted restic backups; filesystem permissions on VPS. | As part of backup retention. |
 | World data | Private group data | Encrypted restic backups. | As part of backup retention. |
@@ -406,7 +410,7 @@ Backup, deployment, force deployment, and restore must share one global lock. Co
 | Metric | Threshold | Alert | Response |
 |--------|-----------|-------|----------|
 | VPS heartbeat | Missed Healthchecks.io heartbeat | Critical Telegram | Investigate VPS/provider/network. |
-| Backup age | Backup overdue | Critical Telegram | Check systemd timer, restic, rclone, Yandex Disk. |
+| Backup age | Backup overdue | Critical Telegram | Check systemd timer, restic, rclone, Google Drive. |
 | Disk usage | Warning 80%, critical 90% | Warning/critical Telegram | Prune releases/logs, inspect world/CoreProtect growth. |
 | Minecraft ping | Multiple consecutive failures | Restart then critical Telegram if still failing | Investigate service logs and Paper logs. |
 | Deployment state | Pending more than 24h | Warning Telegram and in-game notice | Wait or manually force deploy. |
@@ -508,7 +512,7 @@ Local testing infrastructure allows validating infrastructure scripts (`deploy.s
 | Test Category | In Scope | Out of Scope |
 |---------------|----------|--------------|
 | Full deploy cycle | Player-aware wait, pre-deploy backup, release switch, health check, rollback (against a stub) | Actual Minecraft gameplay |
-| Backup/restore | restic + rclone to local S3-compatible storage (RustFS) | Real Yandex Disk |
+| Backup/restore | restic + rclone to local S3-compatible storage (RustFS) | Real Google Drive |
 | Mocked operational integration | Deploy lifecycle, backup/restore, locking, notifications, config healing, and artifact download behavior | Production VPS and production credentials |
 | Paper/plugin startup | Start pinned Paper with every configured production plugin and verify each enables | Gameplay, production databases, external plugin authentication/services |
 | Ansible provisioning | Not covered locally | Use real VPS for provisioning validation |
@@ -643,7 +647,7 @@ No critical open questions remain. Implementation choices may be adjusted only i
 | CoreProtect | Audit and rollback plugin for player actions. |
 | RCON | Local remote console protocol used by automation scripts. |
 | restic | Encrypted backup tool. |
-| rclone | Tool used to access Yandex Disk remote storage. |
+| rclone | Tool used to access Google Drive remote storage. |
 | RPO | Recovery point objective; acceptable data loss window. |
 | RTO | Recovery time objective; acceptable recovery duration. |
 
