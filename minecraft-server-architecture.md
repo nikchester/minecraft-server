@@ -8,6 +8,11 @@
 
 > **Companion documents:** `SPEC.md` is the implementation contract. `PLAN.md` is the phased build plan. This architecture document remains the detailed design rationale and constraint source.
 
+> **Backup provider update (2026-10-28):** Google Drive is current. The legacy
+> production secret `YANDEX_RCLONE_CONFIG` now holds the sole Google remote;
+> old Yandex snapshots are preserved separately, not migrated. See
+> `docs/BACKUP_RESTORE.md` and `docs/SECRETS.md`.
+
 ---
 
 ## 1. Project Overview
@@ -48,7 +53,7 @@ Additional clarified implementation decisions:
 - Player-aware deployments
 - Telegram alerts
 - External availability monitoring via Healthchecks.io
-- Encrypted offsite backups to Yandex Disk using restic + rclone
+- Encrypted offsite backups to Google Drive using restic + rclone
 
 ---
 
@@ -148,7 +153,7 @@ The implementation should follow these principles:
               │
               ▼
       ┌───────────────────┐
-      │   Yandex Disk     │
+      │   Google Drive    │
       │ encrypted restic  │
       │ repository        │
       └───────────────────┘
@@ -927,7 +932,7 @@ restic
   ↓
 rclone
   ↓
-Yandex Disk
+Google Drive
 ```
 
 The restic repository must be encrypted.
@@ -1373,7 +1378,7 @@ Ansible bootstrap
     ↓
 Git configuration applied
     ↓
-restic repository accessed through rclone/Yandex Disk
+restic repository accessed through rclone/Google Drive
     ↓
 latest chosen backup restored
     ↓
@@ -1391,7 +1396,7 @@ GitHub repository
 +
 GitHub Secrets
 +
-Yandex Disk backups
+Google Drive backups
 ```
 
 ---
@@ -1660,7 +1665,7 @@ Recommended implementation order:
 
 - restic
 - rclone
-- Yandex Disk
+- Google Drive
 - scheduled backup
 - retention
 - restore test
@@ -1693,7 +1698,7 @@ Recommended implementation order:
 
 - simulate new VPS
 - provision with Ansible
-- restore from Yandex Disk
+- restore from Google Drive
 - verify server health
 
 ---
@@ -1761,7 +1766,7 @@ The project is considered v1-complete when all of the following are true.
 
 ## Disaster Recovery
 
-- A new VPS can be reconstructed from Git + GitHub Secrets + Yandex Disk backup.
+- A new VPS can be reconstructed from Git + GitHub Secrets + Google Drive backup.
 
 ---
 
@@ -1848,7 +1853,7 @@ new VPS
     ↓
 Ansible
     ↓
-restore from Yandex Disk
+restore from Google Drive
     ↓
 server online again
 ```

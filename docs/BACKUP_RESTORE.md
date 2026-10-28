@@ -4,8 +4,26 @@
 
 - Scheduled backups run every 6 hours.
 - A pre-deploy backup is mandatory before any deployment that can change runtime state.
-- Backups are encrypted with restic and uploaded to Yandex Disk through rclone.
+- Backups are encrypted with restic and uploaded to Google Drive through rclone.
 - A failed pre-deploy backup blocks deployment.
+
+## Current Provider And History (2026-10-28)
+
+Production has switched to Google Drive; a snapshot in the new restic repository
+has been verified. Current runtime config has the sole remote `[gdrive]` with
+`type = drive`, so backup and restore discover `gdrive` and use
+`rclone:gdrive:minecraft-restic`. The existing GitHub production secret
+`YANDEX_RCLONE_CONFIG` now holds that Google config. Its legacy name is retained
+so the next deployment continues to install the Google config without a secret
+rename. See `docs/SECRETS.md` for the offline deploy preflight contract.
+
+Old Yandex Disk snapshots were **not migrated**; they remain preserved in the old
+repository and are not listed by the new Google repository. Do not delete the old
+repository or treat Google history as containing those snapshots. Restoring an
+old Yandex snapshot requires a separately authorized operation with the old
+repository configuration and credentials; normal deployment must not switch back.
+Changing providers does not change the retention policy or initialize/migrate a
+repository as part of this configuration guard.
 
 ## Backup Contents
 
