@@ -13,7 +13,7 @@ Secrets are not committed to Git. Values are added manually by the owner to GitH
 | `MANAGEMENT_SERVER_SECRET` | production environment | Minecraft management server secret. |
 | `AUTHME_MYSQL_PASSWORD` | production environment | AuthMe's configured MySQL password. |
 | `RESTIC_PASSWORD` | production environment | restic repository encryption password. |
-| `YANDEX_RCLONE_CONFIG` | production environment | rclone config content for Yandex Disk remote. |
+| `YANDEX_RCLONE_CONFIG` | production environment | Legacy name: complete rclone config for the sole Google Drive remote (`[gdrive]`, `type = drive`), including OAuth token JSON with `refresh_token`. |
 | `TELEGRAM_BOT_TOKEN` | production environment | Telegram bot token for alerts. |
 | `TELEGRAM_CHAT_ID` | production environment | Telegram chat ID for owner alerts. |
 | `DISCORD_BOT_TOKEN` | production environment | DiscordSRV bot token, rendered into `plugins/DiscordSRV/config.yml`'s `BotToken` on every deploy cycle (issue #20); the config is restricted to the Minecraft service account. |
@@ -21,6 +21,26 @@ Secrets are not committed to Git. Values are added manually by the owner to GitH
 | `HEALTHCHECKS_BACKUP_URL` | production environment | Healthchecks.io job URL for backup monitoring. |
 
 Current project status: the owner reported that all required secrets have been added to the `production` environment.
+
+### Backup provider (2026-10-28)
+
+Production backups now use Google Drive. Keep the existing production secret name
+`YANDEX_RCLONE_CONFIG` for backward compatibility; its value is Google Drive config,
+not Yandex credentials. Deploy maps it to `BACKUP_RCLONE_CONFIG` and writes
+`/etc/minecraft/secrets/rclone.conf`, preserving multiline content and JSON quotes
+(CRLF is normalized to LF for runtime remote discovery). No GitHub secret rename
+is required for the next deployment.
+
+Before SSH or runtime secret transfer, deploy runs offline regression tests and
+`scripts/validate-backup-config.py --env BACKUP_RCLONE_CONFIG`. It requires exactly
+one runtime-compatible remote with `type = drive` and a JSON token containing a
+nonempty `refresh_token`. The remote name is not hardcoded: backup and restore
+discover the first section. Multiple remotes are rejected to avoid selecting the
+wrong provider. `client_id`, `client_secret`, `root_folder_id` and a specific scope
+are not required by this structural check; `drive.file` is accepted. See
+[rclone Drive documentation](https://rclone.org/drive/) for optional OAuth settings.
+The preflight never prints config/token values and does not contact Google: it
+cannot verify token validity, permissions, quota, or repository identity.
 
 ## Runtime Secret Files
 

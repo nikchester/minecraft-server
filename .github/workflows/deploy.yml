@@ -34,14 +34,15 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           HEALTHCHECKS_BACKUP_URL: ${{ secrets.HEALTHCHECKS_BACKUP_URL }}
           HEALTHCHECKS_VPS_URL: ${{ secrets.HEALTHCHECKS_VPS_URL }}
-          YANDEX_RCLONE_CONFIG: ${{ secrets.YANDEX_RCLONE_CONFIG }}
+          # Legacy secret name; its content is now the sole Google Drive remote.
+          BACKUP_RCLONE_CONFIG: ${{ secrets.YANDEX_RCLONE_CONFIG }}
         run: |
           set -eu
           for name in \
             VPS_SSH_KEY VPS_HOST VPS_USER RCON_PASSWORD \
             MANAGEMENT_SERVER_SECRET AUTHME_MYSQL_PASSWORD RESTIC_PASSWORD \
             TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID DISCORD_BOT_TOKEN \
-            HEALTHCHECKS_BACKUP_URL HEALTHCHECKS_VPS_URL YANDEX_RCLONE_CONFIG; do
+            HEALTHCHECKS_BACKUP_URL HEALTHCHECKS_VPS_URL BACKUP_RCLONE_CONFIG; do
             case "${!name}" in
               *[![:space:]]*) ;;
               *)
@@ -50,6 +51,9 @@ jobs:
               ;;
             esac
           done
+
+          python3 -m unittest discover -s test/config -p 'test_backup_config.py'
+          python3 scripts/validate-backup-config.py --env BACKUP_RCLONE_CONFIG
 
           render_dir=$(mktemp -d)
           trap 'rm -rf "$render_dir"' EXIT
@@ -87,7 +91,7 @@ jobs:
           # as ${{ secrets.X }} inside a quoted shell string. GitHub Actions
           # substitutes ${{ }} expressions as raw text before bash ever sees
           # the script, so a secret containing a double quote (e.g. the JSON
-          # in YANDEX_RCLONE_CONFIG) would terminate the surrounding "..."
+          # in BACKUP_RCLONE_CONFIG) would terminate the surrounding "..."
           # early and corrupt everything after it — which is exactly what
           # broke the rclone token previously.
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -101,7 +105,8 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           HEALTHCHECKS_BACKUP_URL: ${{ secrets.HEALTHCHECKS_BACKUP_URL }}
           HEALTHCHECKS_VPS_URL: ${{ secrets.HEALTHCHECKS_VPS_URL }}
-          YANDEX_RCLONE_CONFIG: ${{ secrets.YANDEX_RCLONE_CONFIG }}
+          # Keep the existing production secret; do not rename it on GitHub.
+          BACKUP_RCLONE_CONFIG: ${{ secrets.YANDEX_RCLONE_CONFIG }}
           DEPLOY_REQUEST_ID: ${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           archive="/tmp/minecraft-infra-${DEPLOY_REQUEST_ID}.tgz"
@@ -120,7 +125,8 @@ jobs:
           printf '%s' "$DISCORD_BOT_TOKEN" >"$secret_dir/discord_bot_token"
           printf '%s' "$HEALTHCHECKS_BACKUP_URL" >"$secret_dir/healthchecks_backup_url"
           printf '%s' "$HEALTHCHECKS_VPS_URL" >"$secret_dir/healthchecks_vps_url"
-          printf '%s' "$YANDEX_RCLONE_CONFIG" >"$secret_dir/rclone.conf"
+          # Normalize CRLF for scripts/lib.sh's first-section discovery.
+          printf '%s' "$BACKUP_RCLONE_CONFIG" | tr -d '\r' >"$secret_dir/rclone.conf"
           tar --exclude='.git' --exclude='.opencode' -czf "$archive" .
           scp -i ~/.ssh/deploy_key "$archive" "$VPS_USER@$VPS_HOST:$remote_archive"
           ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" \

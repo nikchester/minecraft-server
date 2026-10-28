@@ -2,7 +2,7 @@
 
 Production-like infrastructure for a small private Minecraft server at `minecraft.nikchester.ru`.
 
-The project intentionally keeps runtime operations simple: one Debian 13 VPS, Paper as a native Java process under systemd, Ansible for provisioning, GitHub Actions for validation/deployment, restic+rclone backups to Yandex Disk, and lightweight Telegram/Healthchecks.io monitoring.
+The project intentionally keeps runtime operations simple: one Debian 13 VPS, Paper as a native Java process under systemd, Ansible for provisioning, GitHub Actions for validation/deployment, restic+rclone backups to Google Drive, and lightweight Telegram/Healthchecks.io monitoring.
 
 ## Status
 
@@ -10,7 +10,7 @@ The server is live and deployed at `minecraft.nikchester.ru:25565`. The full pip
 
 - Paper (pinned build, see `minecraft/versions.yml`) running under `minecraft.service`, AuthMeReloaded and CoreProtect loaded.
 - RCON bound locally but not exposed (only 22/tcp and 25565/tcp are open in the firewall).
-- restic backups to Yandex Disk succeed, verified via `restic snapshots`.
+- As of 2026-10-28, production restic backups use Google Drive; a snapshot in the new repository is verified. Old Yandex snapshots are preserved separately, not migrated. The legacy production secret `YANDEX_RCLONE_CONFIG` now holds the sole Google remote; deploy validates it before SSH. See `docs/BACKUP_RESTORE.md` and `docs/SECRETS.md`.
 - Telegram and Healthchecks.io alerts confirmed delivering (not just non-error exits), including a direct Telegram alert on a failed backup, not only a Healthchecks.io ping (#6, closed).
 - Old release directories under `/srv/minecraft/releases` are pruned after every successful deploy, keeping the newest 5 and always protecting `current-release`/`previous-release` (#7, closed).
 - A full `restore.sh` run against a real snapshot has been exercised end-to-end on production, including a pre-restore safety backup; verified whitelist and AuthMe data survive the restore (#8, closed).
@@ -58,6 +58,7 @@ Install the same tools used in CI when available:
 
 ```bash
 python3 scripts/validate-repository.py
+python3 -m unittest discover -s test/config -p 'test_backup_config.py'
 shellcheck scripts/*.sh
 ansible-playbook -i ansible/inventory/production/hosts.example.yml ansible/playbooks/bootstrap.yml --syntax-check
 ansible-lint ansible/
