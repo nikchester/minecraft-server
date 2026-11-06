@@ -78,8 +78,35 @@ test_pre_restore_backup_does_not_evict_target() {
   /opt/minecraft/bin/restore.sh "$target" CONFIRM_FULL_RESTORE || return 1
 }
 
+test_expired_oauth_token_fails_without_init() {
+  # Regression test for issue #80: production's Google Drive OAuth token
+  # expired, and backup.sh misread every resulting restic failure as "repository
+  # not initialized", ran a doomed restic init, and alerted without the cause.
+  reset_environment
+  deploy_one_release || return 1
+  rm -f /srv/minecraft/state/last-backup-success /tmp/minecraft-stub-telegram.log
+  local output status=0
+  output=$(RESTIC_SHIM_INVALID_GRANT=1 /opt/minecraft/bin/backup.sh scheduled 2>&1) || status=$?
+  if [[ "$status" -eq 0 ]]; then
+    echo "  ASSERT FAILED: backup.sh succeeded with an expired OAuth token" >&2
+    return 1
+  fi
+  if [[ "$output" == *"not initialized yet"* ]]; then
+    echo "  ASSERT FAILED: backup.sh treated an auth failure as an uninitialized repository" >&2
+    return 1
+  fi
+  if [[ -e /srv/minecraft/state/last-backup-success ]]; then
+    echo "  ASSERT FAILED: failed backup refreshed last-backup-success" >&2
+    return 1
+  fi
+  assert_file_exists /tmp/minecraft-stub-telegram.log || return 1
+  assert_contains "$(cat /tmp/minecraft-stub-telegram.log)" "invalid_grant" || return 1
+  assert_contains "$(cat /tmp/minecraft-stub-telegram.log)" "re-authorize rclone" || return 1
+}
+
 reset_environment
 run_test "backup.sh creates a real restic snapshot in minio" test_backup_creates_snapshot
+run_test "expired Google OAuth token fails backup without restic init" test_expired_oauth_token_fails_without_init
 run_test "restore.sh recovers a modified file from a snapshot" test_restore_recovers_modified_file
 run_test "pre-restore backup does not evict the snapshot being restored" test_pre_restore_backup_does_not_evict_target
 report_and_exit

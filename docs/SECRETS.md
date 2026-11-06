@@ -42,6 +42,11 @@ are not required by this structural check; `drive.file` is accepted. See
 The preflight never prints config/token values and does not contact Google: it
 cannot verify token validity, permissions, quota, or repository identity.
 
+The OAuth client behind the token must be published (**In production**) in Google
+Cloud. Google expires refresh tokens of **Testing** clients after 7 days, which
+stopped production backups on 2026-11-04 (issue #80). To re-issue the token, follow
+"Google Drive OAuth Token Expired Or Revoked" in `docs/BACKUP_RESTORE.md`.
+
 ## Runtime Secret Files
 
 Automation renders runtime secret files under `/etc/minecraft/secrets/` with restrictive permissions. Files under that directory must never be copied into the repository.
