@@ -56,6 +56,55 @@ Initial restic retention policy:
 sudo /opt/minecraft/bin/backup.sh scheduled
 ```
 
+## Google Drive OAuth Token Expired Or Revoked
+
+Symptom: Telegram alerts `backup (scheduled) failed: Google Drive OAuth token
+expired or revoked (invalid_grant)` and, after 24 hours, `backup is stale`. The
+`minecraft-backup.service` journal contains rclone's
+`oauth2: "invalid_grant" "Token has been expired or revoked."`. Retrying cannot
+help: only a new OAuth token restores backups.
+
+Root cause seen in production (issue #80): the Google Cloud OAuth consent screen
+of the rclone client was in **Testing** publishing status. Google expires refresh
+tokens issued to such clients after 7 days. The token issued on 2026-10-28 stopped
+working on 2026-11-04.
+
+Fix applied on 2026-11-06: a dedicated Google Cloud project
+`minecraft-backup-rclone` with the Desktop OAuth client `rclone-minecraft-vps` and
+Google Drive API enabled. Its consent screen is **In production**: Google allowed
+publishing only after Branding had a home page (`https://nikchester.ru/`), a privacy
+policy (`https://nikchester.ru/minecraft/privacy/`) and the authorized domain
+`nikchester.ru`. With the non-sensitive `drive.file` scope no Google verification
+is needed. A `drive.file` client sees only files it created, so this client writes
+a new `minecraft-restic` repository. Snapshots from 2026-10-28 to 2026-11-04 stay in
+the old client's folder of the same name.
+
+Recovery:
+
+1. In Google Cloud Console, open *Google Auth Platform → Audience* for the project
+   that owns the rclone `client_id`. Make sure its status is **In production**.
+   Without it the new token also expires in 7 days.
+2. On a workstation with a browser, run
+   `rclone authorize "drive" "<client_id>" "<client_secret>"` with the same client
+   as in production, and approve access with the Google account that owns the
+   backup folder. Use the same scope as production (`drive.file`), otherwise the
+   existing `minecraft-restic` folder created by this client is not visible.
+3. Replace only the `token = {...}` line of the `[gdrive]` remote with the JSON
+   that `rclone authorize` printed. Keep all other lines unchanged.
+4. Store the full updated config in the GitHub `production` environment secret
+   `YANDEX_RCLONE_CONFIG`. Do this before step 5: every deployment overwrites
+   `/etc/minecraft/secrets/rclone.conf` from this secret.
+5. Run the `Deploy` workflow on `main` (`workflow_dispatch`).
+   `deploy-request.sh` installs the new `rclone.conf` before the pre-deploy backup.
+6. On the VPS, run `sudo systemctl start minecraft-backup.service` and check
+   `journalctl -u minecraft-backup.service -n 30` for `backup completed`.
+7. Wait for the next `minecraft-healthcheck.timer` run and confirm that the
+   `backup stale` alerts stop.
+
+`backup.sh` runs `restic init` only when restic exits with code 10 (repository
+does not exist). An authentication or network failure never initializes a new
+repository.
+
 ## Full Restore V1
 
 Selective restore is out of scope for v1. The restore workflow restores full mutable state from a selected restic snapshot.
