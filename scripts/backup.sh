@@ -33,11 +33,31 @@ run_backup() {
   # single failed run is invisible in Telegram unless backups keep failing
   # for a full day (healthcheck.sh's own 24h staleness check is the only
   # other thing watching this).
-  trap 'send_hc "/fail"; telegram_alert critical "backup (${REASON}) failed"' ERR
+  FAILURE_HINT=""
+  trap 'send_hc "/fail"; telegram_alert critical "backup (${REASON}) failed${FAILURE_HINT}"' ERR
   log "starting ${REASON} backup"
-  if ! restic snapshots >/dev/null 2>&1; then
+  # restic (>= 0.17) exits 10 only when the repository genuinely does not
+  # exist yet. Any other failure -- an expired Google Drive OAuth token, a
+  # network outage, a wrong password -- must fail the backup as-is: treating
+  # it as "not initialized" (as this used to) logged a misleading message and
+  # buried the real cause under a doomed restic init (issue #80).
+  local probe_output probe_status=0
+  probe_output=$(restic cat config 2>&1 >/dev/null) || probe_status=$?
+  if [[ "$probe_status" -eq 10 ]]; then
     log "restic repository not initialized yet; initializing"
     restic init
+  elif [[ "$probe_status" -ne 0 ]]; then
+    printf '%s\n' "$probe_output" >&2
+    if [[ "$probe_output" == *invalid_grant* ]]; then
+      # Google revoked or expired the rclone refresh token. Retrying cannot
+      # help; only re-authorizing the remote does (docs/BACKUP_RESTORE.md).
+      FAILURE_HINT=": Google Drive OAuth token expired or revoked (invalid_grant); re-authorize rclone, see docs/BACKUP_RESTORE.md"
+    else
+      FAILURE_HINT=": restic repository is unreachable (exit ${probe_status})"
+    fi
+    log "restic repository check failed${FAILURE_HINT}"
+    # Not "return 1": a plain failing command is what fires the ERR trap.
+    false
   fi
   # A prior backup killed mid-run (VPS reboot, OOM, manual intervention)
   # leaves its repository lock behind; restic unlock only clears locks

@@ -7,4 +7,14 @@ if [[ -e /tmp/restic-hold ]]; then
   done
 fi
 
+# Set RESTIC_SHIM_INVALID_GRANT=1 to reproduce production's failure when
+# Google revokes or expires the rclone OAuth token (issue #80): every call
+# fails with rclone's real error text and restic's generic exit code 1,
+# which is not restic's exit code 10 for "repository does not exist".
+if [[ "${RESTIC_SHIM_INVALID_GRANT:-}" == "1" ]]; then
+  echo 'rclone: Failed to create file system for "gdrive:minecraft-restic": couldn'"'"'t fetch token - maybe it has expired? - refresh with "rclone config reconnect gdrive:": oauth2: "invalid_grant" "Token has been expired or revoked."' >&2
+  echo 'Fatal: unable to open repository at rclone:gdrive:minecraft-restic: error talking HTTP to rclone: exit status 1' >&2
+  exit 1
+fi
+
 exec /usr/bin/restic "$@"
