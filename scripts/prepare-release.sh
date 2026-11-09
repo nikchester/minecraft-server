@@ -197,6 +197,10 @@ prepare() {
       "$RELEASE_DIR/paper.jar"
   fi
   download_plugins
+  if [[ "${ISSUE_77_DATAPACKS:-true}" == "true" ]]; then
+    log "downloading pinned issue #77 Minecraft 26.2 datapacks"
+    python3 "$SCRIPT_DIR/install-datapacks.py" "$RELEASE_DIR/datapacks"
+  fi
   "$SCRIPT_DIR/render-config.py" \
     --source minecraft/server.properties \
     --output "$RELEASE_DIR/server.properties"

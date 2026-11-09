@@ -144,10 +144,16 @@ verify_release() {
 
 rollback_release() {
   set_state ROLLBACK
-  local previous
+  local previous failed_release
   previous=$(cat "$MINECRAFT_STATE_DIR/previous-release" 2>/dev/null || true)
   [[ -n "$previous" && -d "$MINECRAFT_ROOT/releases/$previous" ]] || fail "no previous release available"
   systemctl stop minecraft.service || true
+  failed_release=$(cat "$MINECRAFT_STATE_DIR/target-release" 2>/dev/null || true)
+  if [[ -n "$failed_release" && -f "$MINECRAFT_ROOT/releases/$failed_release/datapack-rollback/.complete" ]]; then
+    python3 "$SCRIPT_DIR/apply-datapacks.py" rollback \
+      "$MINECRAFT_SHARED_DIR/world/datapacks" \
+      "$MINECRAFT_ROOT/releases/$failed_release/datapack-rollback"
+  fi
   switch_current "$previous"
   set_state VERIFY_ROLLBACK
   if verify_release; then
@@ -274,6 +280,15 @@ run_deploy() {
   if [[ -f "$MINECRAFT_STATE_DIR/target-release" ]]; then
     target=$(cat "$MINECRAFT_STATE_DIR/target-release")
     [[ -d "$MINECRAFT_ROOT/releases/$target" ]] || fail "target release missing: $target"
+    if [[ -d "$MINECRAFT_ROOT/releases/$target/datapacks" ]]; then
+      if ! python3 "$SCRIPT_DIR/apply-datapacks.py" apply \
+        "$MINECRAFT_ROOT/releases/$target/datapacks" \
+        "$MINECRAFT_SHARED_DIR/world/datapacks" \
+        "$MINECRAFT_ROOT/releases/$target/datapack-rollback"; then
+        systemctl start minecraft.service || true
+        fail "failed to install target release datapacks; previous release restarted"
+      fi
+    fi
     readlink -f "$MINECRAFT_CURRENT_DIR" | xargs -r basename >"$MINECRAFT_STATE_DIR/previous-release"
     switch_current "$target"
   fi

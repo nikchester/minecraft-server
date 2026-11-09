@@ -9,6 +9,10 @@ prepare() {
   local release_id=$1
   mkdir -p "$state"
   /opt/minecraft/bin/prepare-release.sh "$release_id"
+  python3 /opt/minecraft/bin/apply-datapacks.py \
+    apply "$root/releases/$release_id/datapacks" \
+    "$root/shared/world/datapacks" \
+    "$root/releases/$release_id/datapack-rollback"
   # Staging must never log into production Discord or post to its channels.
   rm -f "$root/releases/$release_id"/plugins/discordsrv-*.jar
   python3 - "$root/releases/$release_id/server.properties" <<'PY'
@@ -66,9 +70,14 @@ case "${1:-serve}" in
     ;;
   rollback)
     [[ -f "$state/previous-release" ]] || { echo 'No previous release' >&2; exit 1; }
-    previous=$(cat "$state/previous-release")
-    current_release=$(basename "$(readlink "$current")")
-    switch_release "$previous"
+  previous=$(cat "$state/previous-release")
+  current_release=$(basename "$(readlink "$current")")
+  if [[ -f "$root/releases/$current_release/datapack-rollback/.complete" ]]; then
+    python3 /opt/minecraft/bin/apply-datapacks.py rollback \
+      "$root/shared/world/datapacks" \
+      "$root/releases/$current_release/datapack-rollback"
+  fi
+  switch_release "$previous"
     printf '%s\n' "$current_release" >"$state/previous-release"
     ;;
   *) echo 'Usage: server.sh {serve|update|rollback}' >&2; exit 2 ;;

@@ -22,7 +22,8 @@ ENV MINECRAFT_ROOT=/srv/minecraft \
     MINECRAFT_STATE_DIR=/srv/minecraft/state \
     MINECRAFT_CURRENT_DIR=/srv/minecraft/current \
     MINECRAFT_SHARED_DIR=/srv/minecraft/shared \
-    MINECRAFT_LOCK_FILE=/srv/minecraft/state/operation.lock
+    MINECRAFT_LOCK_FILE=/srv/minecraft/state/operation.lock \
+    ISSUE_77_DATAPACKS=false
 
 WORKDIR /opt/test/repo
 CMD ["/opt/test/run-paper-plugin-smoke.sh"]

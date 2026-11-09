@@ -47,6 +47,13 @@ via RCON and gives Paper up to 120 seconds to save. `restart: no` means it
 will not start on reboot/Docker Desktop restart. Backups are a separate host
 directory `test/staging/backups/`, ignored by Git.
 
+Each release downloads the seven verified Minecraft 26.2 datapack releases
+from issue #77 and installs them into the staging world's `datapacks/`
+directory. Enchantments Expansion and Backpacks & More were excluded after
+load errors during staging verification. Installation runs on first start and
+on `update`; existing world data is retained. To update an existing staging
+world, run `./test/staging/staging.ps1 update`.
+
 ## Update, rollback and backup
 
 Always ask players to leave before stopping. These commands operate only on

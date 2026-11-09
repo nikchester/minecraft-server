@@ -46,7 +46,8 @@ ENV PATH="/opt/test/shim:${PATH}" \
     MINECRAFT_STATE_DIR=/srv/minecraft/state \
     MINECRAFT_CURRENT_DIR=/srv/minecraft/current \
     MINECRAFT_SHARED_DIR=/srv/minecraft/shared \
-    MINECRAFT_LOCK_FILE=/srv/minecraft/state/operation.lock
+    MINECRAFT_LOCK_FILE=/srv/minecraft/state/operation.lock \
+    ISSUE_77_DATAPACKS=false
 
 COPY test/local/fixtures/ /opt/test/fixtures/
 COPY test/local/tests/ /opt/test/tests/
