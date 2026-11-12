@@ -72,5 +72,5 @@ bash test/local/run-all.sh
 
 This runs the fast operational scenarios and starts pinned Paper with every
 configured production plugin in a disposable container. CI runs the same
-command on pull requests and pushes to `main`/`dev`. See `CONTRIBUTING.md` for
+command on pull requests. See `CONTRIBUTING.md` for
 the fast-suite-only command and CI boundaries.
