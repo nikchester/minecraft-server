@@ -18,8 +18,8 @@ DiscordSRV in a throwaway Docker container so you can provide a test bot,
 connect a client, and verify AuthMe messages, Discord chat, and proximity
 voice. The AuthMe welcome text is copied from
 `minecraft/plugins/AuthMe/welcome.txt` into the image. It does not touch
-`systemd` or the production VPS. CI runs `bash test/local/run-all.sh` on pull requests and
-pushes to `main`/`dev`; that job starts every configured plugin without a bot
+`systemd` or the production VPS. CI runs `bash test/local/run-all.sh` on pull requests only;
+that job starts every configured plugin without a bot
 token and does not connect to Discord.
 
 ## Requirements
