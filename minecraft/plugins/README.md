@@ -7,7 +7,7 @@ Required plugins for v1:
 - AuthMeReloaded — the pinned 6.x Paper build downloads its libraries (database drivers, HikariCP, ConfigMe) from Maven Central on first start. Its committed `config.yml` keeps `settings.restrictions.loginTimeout: 60`, `settings.restrictions.registerTimeout: 60` (6.x split the old `settings.restrictions.timeout`), `settings.restrictions.maxRegPerIp: 0` and `settings.perPlayerLocale: false` (Russian messages for every player); release preparation renders it into persistent plugin data, and `scripts/ensure-authme-config.sh` also checks these settings on deploy ticks. The 6.x graphical login/register dialogs (`settings.registration.dialog.preJoin.enable`, `postJoin.enable`) are disabled, so players keep using `/login` and `/register` in chat.
 - CoreProtect
 - SkinsRestorer — players can use `/skin set <licensed-account-name>` to copy a Minecraft account's skin; `/skin clear` restores their account skin. Its first start generates the plugin's default configuration in persistent plugin data. See the [SkinsRestorer player guide](https://skinsrestorer.net/docs/features/change-skin).
-- Onlysleep — the pinned 1.4.2 build skips the night once 50% of eligible players in that world are sleeping (rounded up). Its settings and Russian player-facing messages are committed under `Onlysleep/`; the shared bStats config opts out of metrics.
+- Onlysleep — the pinned 1.4.4 build skips the night once 50% of eligible players in that world are sleeping (rounded up). Its settings and Russian player-facing messages are committed under `Onlysleep/`; the shared bStats config opts out of metrics.
 
 Optional administrative plugin:
 

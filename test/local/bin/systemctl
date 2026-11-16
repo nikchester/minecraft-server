@@ -153,7 +153,7 @@ case "$subcommand" in
     mkdir -p "${current_dir}/logs"
     printf '[stub] [AuthMe] AuthMe enabled (test stub, not real Paper)\n' >>"${current_dir}/logs/latest.log"
     if [[ ! -f "${current_dir}/.omit_onlysleep_enable_log" ]]; then
-      printf '[stub] [Onlysleep] Enabling Onlysleep v1.4.2 (test stub, not real Paper)\n' >>"${current_dir}/logs/latest.log"
+      printf '[stub] [Onlysleep] Enabling Onlysleep v1.4.4 (test stub, not real Paper)\n' >>"${current_dir}/logs/latest.log"
     fi
     if [[ -f "${current_dir}/.force_fail" ]]; then
       # For testing deploy.sh's rollback path: a release with this marker

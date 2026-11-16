@@ -151,7 +151,7 @@ in this directory: nothing here is copied into a production release.
 
 ### Onlysleep (issue #48)
 
-Onlysleep 1.4.2 is pinned in `minecraft/versions.yml`; the real Paper/plugin
+Onlysleep 1.4.4 is pinned in `minecraft/versions.yml`; the real Paper/plugin
 smoke test verifies its JAR metadata, that Paper enables it, and that the
 committed 50% per-world threshold, Russian player messages, disabled update
 checks, and bStats opt-out are present in the runtime configuration. A release
