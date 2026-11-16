@@ -13,15 +13,20 @@ export DISCORDSRV_CONFIG DISCORDSRV_VOICE_CONFIG
 FAKE_TOKEN_FILE=/tmp/discord_bot_token
 FAKE_TOKEN="fake-test-token-not-a-real-secret"
 
+# Stock AuthMe 6.x layout: settings.restrictions.timeout is split into
+# loginTimeout/registerTimeout, and the unrelated settings.sessions.timeout
+# keeps the old leaf name.
 write_stock_authme_config() {
   mkdir -p "$(dirname "$AUTHME_CONFIG")"
   cat >"$AUTHME_CONFIG" <<'EOF'
 settings:
     messagesLanguage: en
+    perPlayerLocale: true
     serverName: Your Minecraft Server
     restrictions:
         allowedNicknameCharacters: '[a-zA-Z0-9_]*'
-        timeout: 30
+        loginTimeout: 30
+        registerTimeout: 30
         maxRegPerIp: 1
         forceSurvivalMode: false
     sessions:
@@ -32,25 +37,67 @@ DataSource:
 EOF
 }
 
+# A config written by AuthMe 5.x, before AuthMe 6 has started once and
+# migrated settings.restrictions.timeout into the two new keys.
+write_pre_migration_authme_config() {
+  mkdir -p "$(dirname "$AUTHME_CONFIG")"
+  cat >"$AUTHME_CONFIG" <<'EOF'
+settings:
+    messagesLanguage: ru
+    serverName: The Tatarland Rebirth
+    restrictions:
+        allowedNicknameCharacters: '[a-zA-Z0-9_]*'
+        timeout: 60
+        maxRegPerIp: 1
+    sessions:
+        enabled: false
+        timeout: 10
+DataSource:
+    backend: SQLITE
+EOF
+}
+
+# Prints the value at a dotted path of the AuthMe config, booleans as
+# YAML spells them, so assertions check the exact key rather than a line
+# that merely looks similar somewhere else in the file.
+authme_value() {
+  python3 - "$AUTHME_CONFIG" "$1" <<'PY'
+import sys
+import yaml
+
+node = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+for part in sys.argv[2].split("."):
+    node = node[part]
+print(str(node).lower() if isinstance(node, bool) else node)
+PY
+}
+
+assert_authme_tuned() {
+  local context=$1
+  assert_eq 60 "$(authme_value settings.restrictions.loginTimeout)" \
+    "(${context} settings.restrictions.loginTimeout must be healed to 60)" || return 1
+  assert_eq 60 "$(authme_value settings.restrictions.registerTimeout)" \
+    "(${context} settings.restrictions.registerTimeout must be healed to 60)" || return 1
+  assert_eq 0 "$(authme_value settings.restrictions.maxRegPerIp)" \
+    "(${context} settings.restrictions.maxRegPerIp must be healed to 0)" || return 1
+  assert_eq ru "$(authme_value settings.messagesLanguage)" \
+    "(${context} AuthMe player messages must use Russian)" || return 1
+  assert_eq false "$(authme_value settings.perPlayerLocale)" \
+    "(${context} AuthMe must not switch to each client's language)" || return 1
+  assert_eq "The Tatarland Rebirth" "$(authme_value settings.serverName)" \
+    "(${context} AuthMe welcome placeholder must use the server name)" || return 1
+  # The unrelated settings.sessions.timeout must be left untouched.
+  assert_eq 10 "$(authme_value settings.sessions.timeout)" \
+    "(${context} settings.sessions.timeout must NOT be touched)" || return 1
+}
+
 test_heals_stock_config() {
   reset_environment
   # Simulates AuthMe having already generated its own config once (e.g. a
   # plugin reinstall/update regenerated stock defaults).
   write_stock_authme_config
   /opt/minecraft/bin/ensure-authme-config.sh || return 1
-
-  assert_contains "$(grep -A3 'restrictions:' "$AUTHME_CONFIG")" "timeout: 60" \
-    "(settings.restrictions.timeout must be healed to 60)" || return 1
-  assert_contains "$(grep -A3 'restrictions:' "$AUTHME_CONFIG")" "maxRegPerIp: 0" \
-    "(settings.restrictions.maxRegPerIp must be healed to 0)" || return 1
-  # The unrelated settings.sessions.timeout shares the same leaf key name
-  # and must be left untouched.
-  assert_contains "$(grep -A2 'sessions:' "$AUTHME_CONFIG")" "timeout: 10" \
-    "(settings.sessions.timeout must NOT be touched)" || return 1
-  assert_contains "$(grep -A2 '^settings:' "$AUTHME_CONFIG")" "messagesLanguage: ru" \
-    "(AuthMe player messages must use Russian)" || return 1
-  assert_contains "$(grep -A3 '^settings:' "$AUTHME_CONFIG")" "serverName: The Tatarland Rebirth" \
-    "(AuthMe welcome placeholder must use a Russian server name)" || return 1
+  assert_authme_tuned "stock config:" || return 1
 }
 
 test_re_heals_after_drift() {
@@ -61,17 +108,47 @@ test_re_heals_after_drift() {
   # A plugin update/reinstall on the VPS can regenerate stock defaults at
   # any time, not just at deploy -- the next unconditional deploy-timer
   # tick (a no-op deploy, no new release pending) must still re-heal it.
-  sed -i 's/timeout: 60/timeout: 30/; s/maxRegPerIp: 0/maxRegPerIp: 1/; s/messagesLanguage: ru/messagesLanguage: en/; s/serverName: The Tatarland Rebirth/serverName: Your Minecraft Server/' "$AUTHME_CONFIG"
+  sed -i 's/loginTimeout: 60/loginTimeout: 30/; s/registerTimeout: 60/registerTimeout: 30/; s/maxRegPerIp: 0/maxRegPerIp: 1/; s/messagesLanguage: ru/messagesLanguage: en/; s/perPlayerLocale: false/perPlayerLocale: true/; s/serverName: The Tatarland Rebirth/serverName: Your Minecraft Server/' "$AUTHME_CONFIG"
   /opt/minecraft/bin/ensure-authme-config.sh || return 1
+  assert_authme_tuned "drifted config:" || return 1
+}
 
-  assert_contains "$(grep -A3 'restrictions:' "$AUTHME_CONFIG")" "timeout: 60" \
-    "(drifted settings.restrictions.timeout must be re-healed)" || return 1
-  assert_contains "$(grep -A3 'restrictions:' "$AUTHME_CONFIG")" "maxRegPerIp: 0" \
-    "(drifted settings.restrictions.maxRegPerIp must be re-healed)" || return 1
-  assert_contains "$(grep -A2 '^settings:' "$AUTHME_CONFIG")" "messagesLanguage: ru" \
-    "(drifted AuthMe language must be re-healed to Russian)" || return 1
-  assert_contains "$(grep -A3 '^settings:' "$AUTHME_CONFIG")" "serverName: The Tatarland Rebirth" \
-    "(drifted AuthMe server name must be re-healed to Russian)" || return 1
+test_pre_migration_config_only_logs() {
+  reset_environment
+  # The deploy tick that installs AuthMe 6 runs this before the new plugin
+  # has started: the 5.x key is still there and the new keys are not yet.
+  write_pre_migration_authme_config
+  local output
+  output=$(/opt/minecraft/bin/ensure-authme-config.sh 2>&1) || return 1
+
+  assert_contains "$output" "settings.restrictions.loginTimeout not found" || return 1
+  assert_contains "$output" "settings.restrictions.registerTimeout not found" || return 1
+  # The old key is AuthMe's own migration input and must be left alone.
+  assert_eq 60 "$(authme_value settings.restrictions.timeout)" \
+    "(pre-migration settings.restrictions.timeout must NOT be touched)" || return 1
+  assert_eq 10 "$(authme_value settings.sessions.timeout)" \
+    "(settings.sessions.timeout must NOT be touched)" || return 1
+  assert_eq 0 "$(authme_value settings.restrictions.maxRegPerIp)" \
+    "(keys that kept their place must still be healed)" || return 1
+}
+
+test_repository_authme_config_needs_no_healing() {
+  reset_environment
+  # Git is the source of the rendered config, so it must already hold the
+  # values the periodic self-heal enforces; otherwise every release would
+  # be followed by a forced rewrite.
+  prepare_release authme-config || return 1
+  local output
+  output=$(/opt/minecraft/bin/ensure-authme-config.sh 2>&1) || return 1
+  if [[ "$output" == *"forcing"* || "$output" == *"not found"* ]]; then
+    echo "  ASSERT FAILED: repository AuthMe config needed healing: ${output}" >&2
+    return 1
+  fi
+  assert_authme_tuned "repository config:" || return 1
+  assert_eq false "$(authme_value settings.registration.dialog.preJoin.enable)" \
+    "(pre-join login dialog must stay disabled)" || return 1
+  assert_eq false "$(authme_value settings.registration.dialog.postJoin.enable)" \
+    "(post-join login dialog must stay disabled)" || return 1
 }
 
 test_missing_config_is_a_noop() {
@@ -220,6 +297,8 @@ test_discordsrv_nonsecret_settings_heal_without_token() {
 reset_environment
 run_test "heals a stock AuthMe config to the tuned timeout/IP-limit values" test_heals_stock_config
 run_test "AuthMe config heal re-applies if it drifts back to defaults" test_re_heals_after_drift
+run_test "pre-migration AuthMe 5.x config only logs the missing 6.x keys" test_pre_migration_config_only_logs
+run_test "repository AuthMe config already holds the self-healed values" test_repository_authme_config_needs_no_healing
 run_test "missing AuthMe config (plugin never started) is a no-op, not a failure" test_missing_config_is_a_noop
 run_test "DiscordSRV runtime settings heal stock and drifted configs" test_discordsrv_heals_stock_and_drifted_configuration
 run_test "missing plugin configuration remains a no-op before first start" test_discordsrv_missing_config_is_a_noop
