@@ -121,6 +121,7 @@ fi
 python3 - "$release_dir" "$log_file" <<'PY'
 import os
 import pathlib
+import re
 import sys
 import zipfile
 
@@ -157,6 +158,32 @@ if onlysleep_messages.get("sleep", {}).get("progress-bar", "").find("Игрок�
     failures.append("Onlysleep: Russian progress notification was not rendered")
 if bstats_config.get("enabled") is not False:
     failures.append("bStats: telemetry must be disabled")
+
+# Paper logs "Enabling AuthMe" before AuthMe initializes, and AuthMe can still
+# abort and disable itself afterwards, so require its own success line too.
+# On startup AuthMe re-saves config.yml through ConfigMe, dropping keys it
+# does not know and writing defaults for missing ones: the tuned values must
+# still be there afterwards, which also proves they sit at the 6.x paths.
+if not re.search(r"AuthMe \S+ build n\.\S* successfully enabled!", log):
+    failures.append("AuthMe: plugin did not finish its own initialization")
+authme_settings = (yaml.safe_load(
+    (shared / "plugins/AuthMe/config.yml").read_text(encoding="utf-8")
+) or {}).get("settings") or {}
+authme_restrictions = authme_settings.get("restrictions") or {}
+authme_dialog = (authme_settings.get("registration") or {}).get("dialog") or {}
+for label, actual, expected in (
+    ("settings.restrictions.loginTimeout", authme_restrictions.get("loginTimeout"), 60),
+    ("settings.restrictions.registerTimeout", authme_restrictions.get("registerTimeout"), 60),
+    ("settings.restrictions.maxRegPerIp", authme_restrictions.get("maxRegPerIp"), 0),
+    ("settings.messagesLanguage", authme_settings.get("messagesLanguage"), "ru"),
+    ("settings.perPlayerLocale", authme_settings.get("perPlayerLocale"), False),
+    ("settings.registration.dialog.preJoin.enable",
+     (authme_dialog.get("preJoin") or {}).get("enable"), False),
+    ("settings.registration.dialog.postJoin.enable",
+     (authme_dialog.get("postJoin") or {}).get("enable"), False),
+):
+    if actual != expected or type(actual) is not type(expected):
+        failures.append(f"AuthMe: {label} is {actual!r} after startup, expected {expected!r}")
 
 for key, config in plugins.items():
     if not config.get("download_url"):

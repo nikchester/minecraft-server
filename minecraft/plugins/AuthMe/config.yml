@@ -112,6 +112,10 @@ settings:
     # Message language, available languages:
     # https://github.com/AuthMe/AuthMeReloaded/blob/master/docs/translations.md
     messagesLanguage: ru
+    # When enabled, messages are sent to each player in their client language,
+    # falling back to messagesLanguage if their locale is unavailable.
+    # Disable this if you want all players to receive messages in the same language.
+    perPlayerLocale: false
     # Forces authme to hook into Vault instead of a specific permission handler system.
     forceVaultHook: false
     # Log level: INFO, FINE, DEBUG. Use INFO for general messages,
@@ -190,17 +194,20 @@ settings:
         teleportUnAuthedToSpawn: false
         # Can unregistered players walk around?
         allowMovement: false
-        # After how many seconds should players who fail to login or register
-        # be kicked? Set to 0 to disable.
-        timeout: 60
+        # After how many seconds should players who fail to login be kicked?
+        # Set to 0 to disable.
+        loginTimeout: 60
+        # After how many seconds should players who fail to register be kicked?
+        # Set to 0 to disable.
+        registerTimeout: 60
         # Regex pattern of allowed characters in the player name.
         allowedNicknameCharacters: '[a-zA-Z0-9_]*'
         # How far can unregistered players walk?
         # Set to 0 for unlimited radius
         allowedMovementRadius: 100
-        # Should we protect the player inventory before logging in? Requires ProtocolLib.
+        # Should we protect the player inventory before logging in? Requires PacketEvents.
         ProtectInventoryBeforeLogIn: true
-        # Should we deny the tabcomplete feature before logging in? Requires ProtocolLib.
+        # Should we deny the tabcomplete feature before logging in? Requires PacketEvents.
         DenyTabCompleteBeforeLogin: false
         # Should we display all other accounts from a player when he joins?
         # permission: /authme.admin.accounts
@@ -296,6 +303,37 @@ settings:
         forceKickAfterRegister: false
         # Does AuthMe need to enforce a /login after a successful registration?
         forceLoginAfterRegister: false
+        dialog:
+            # Show a 'Forgot Password?' button in the post-join login dialog.
+            # When clicked, executes /email recover using the email entered in the recovery field.
+            # Requires an email provider to be configured to be useful.
+            showForgotPasswordButton: true
+            # Show a short description body in login, register, and two-factor dialogs.
+            # The body text helps players understand what the dialog is asking them to do.
+            showBody: true
+            preJoin:
+                # Show the login/register dialog during the Paper/Folia pre-join phase.
+                # Independent from postJoin.enable; you may enable either or both options.
+                # On non-Paper/Folia platforms this option has no effect.
+                enable: false
+                # Show a cancel button in Paper/Folia pre-join dialogs.
+                # If disabled, players must submit the dialog or disconnect instead.
+                showCancelButton: true
+                # Allow closing Paper/Folia pre-join dialogs with Escape.
+                # If disabled, the dialog stays open until it is submitted,
+                # cancelled, or the timeout disconnects the player.
+                allowCloseWithEscape: false
+                # Kick players who cancel the Paper/Folia pre-join register dialog.
+                # When false, cancelling lets the player join and shows a post-join register dialog instead.
+                registerCancelKicks: false
+                # Kick players who cancel the Paper/Folia pre-join login dialog.
+                # When false, cancelling lets the player join in limbo to use /email recover.
+                loginCancelKicks: true
+            postJoin:
+                # Show a graphical dialog UI for post-join login/register instead of chat messages.
+                # Requires Minecraft 1.21.6+ on Spigot, or 1.21.11+ on Paper.
+                # On older server versions, this option is automatically ignored.
+                enable: false
     # Enable to display the welcome message (welcome.txt) after a login
     # You can use colors in this welcome.txt + some replaced strings:
     # {PLAYER}: player name, {ONLINE}: display number of online players,

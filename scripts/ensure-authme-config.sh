@@ -7,26 +7,30 @@ source "$SCRIPT_DIR/lib.sh"
 
 AUTHME_CONFIG=${AUTHME_CONFIG:-$MINECRAFT_SHARED_DIR/plugins/AuthMe/config.yml}
 
-# AuthMeReloaded 5.6.0 (pinned in minecraft/versions.yml) nests two
-# unrelated settings under the exact same leaf key name "timeout":
-# settings.restrictions.timeout (login/registration kick timer, seconds)
-# and settings.sessions.timeout (an unrelated remembered-session setting).
-# A plain grep/sed on the key name alone would risk also rewriting the
-# wrong one, so this locates the line number of restrictions.timeout by
-# tracking which settings.* section is currently open, then edits that
-# exact line by number -- sed -i preserves the target file's existing
-# ownership/permissions, which matters here since this runs as root on
-# every deploy tick but the file must stay owned by the minecraft user.
+# AuthMeReloaded 6.x (pinned in minecraft/versions.yml) splits the old
+# settings.restrictions.timeout into settings.restrictions.loginTimeout and
+# settings.restrictions.registerTimeout (login/registration kick timers,
+# seconds). On its first start AuthMe 6 migrates a leftover 5.x "timeout"
+# value into both keys and deletes the old one; until then (a 5.x config
+# still in place) the new keys are absent and this only logs. The config
+# also keeps an unrelated settings.sessions.timeout, so keys are never
+# matched by their leaf name alone: this locates the line inside the
+# settings.restrictions section by tracking which section is currently
+# open, then edits that exact line by number -- sed -i preserves the target
+# file's existing ownership/permissions, which matters here since this
+# runs as root on every deploy tick but the file must stay owned by the
+# minecraft user.
 #
-# settings.restrictions.timeout defaults to 30s -- too short for players to
-# type a password twice -- and settings.restrictions.maxRegPerIp defaults
-# to 1, blocking a second registration behind the same IP (e.g. the same
-# household) from registering; 0 means unlimited. Both live in AuthMe's
-# own, uncommitted plugin data directory and regenerate at their defaults
-# if the key is ever missing, so this self-heals on every deploy cycle the
-# same way DynamicLights' config does (see ensure-dynamiclights-config.sh)
-# instead of relying on a manual VPS edit surviving a plugin update or
-# reinstall.
+# Both timeouts default to 30s -- too short for players to type a password
+# twice -- and settings.restrictions.maxRegPerIp defaults to 1, blocking a
+# second registration behind the same IP (e.g. the same household) from
+# registering; 0 means unlimited. settings.perPlayerLocale defaults to true
+# in AuthMe 6, which would answer players in their client language instead
+# of the configured Russian messages. All of them live in AuthMe's own
+# plugin data directory and regenerate at their defaults if the key is ever
+# missing, so this self-heals on every deploy cycle the same way
+# DynamicLights' config does (see ensure-dynamiclights-config.sh) instead
+# of relying on a manual VPS edit surviving a plugin update or reinstall.
 find_restrictions_line() {
   local key=$1
   awk -v key="$key" '
@@ -116,9 +120,11 @@ ensure_authme_config() {
     return
   fi
 
-  heal_restrictions_key timeout 60
+  heal_restrictions_key loginTimeout 60
+  heal_restrictions_key registerTimeout 60
   heal_restrictions_key maxRegPerIp 0
   heal_settings_key messagesLanguage ru
+  heal_settings_key perPlayerLocale false
   heal_settings_key serverName "The Tatarland Rebirth"
 }
 
