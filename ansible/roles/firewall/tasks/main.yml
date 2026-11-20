@@ -7,6 +7,14 @@
   ansible.builtin.command: ufw allow {{ minecraft_server_port }}/tcp
   changed_when: false
 
+- name: Allow Bedrock discovery
+  ansible.builtin.command: ufw allow 19132/tcp
+  changed_when: false
+
+- name: Allow Bedrock gameplay
+  ansible.builtin.command: ufw allow 19132/udp
+  changed_when: false
+
 - name: Deny incoming by default
   ansible.builtin.command: ufw default deny incoming
   changed_when: false

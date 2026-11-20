@@ -20,3 +20,7 @@ Optional gameplay plugin:
 Optional communication plugin (issue #20):
 
 - DiscordSRV — its committed `config.yml` and `voice.yml` pin the chat channel and proximity voice settings; release preparation renders `DISCORD_BOT_TOKEN` from the environment or `/etc/minecraft/secrets/discord_bot_token` (`../../docs/SECRETS.md`). The config is based on the pinned 1.30.5 upstream defaults. Local live testing confirmed bot login, chat relay, and two-player proximity voice. See `../../docs/LOCAL_PLUGIN_TESTING.md` for the test setup and production configuration details.
+
+Bedrock cross-play:
+
+- Geyser-Spigot and Floodgate allow Bedrock clients to join the Java server. Geyser's committed config sets `auth-type: floodgate` and listens on port `19132` with NetherNet transport; Bedrock clients connect to `minecraft.nikchester.ru:19132`. The production firewall allows this port over both TCP and UDP. AuthMe remains enabled, so Bedrock players use the server's AuthMe registration/login flow.
