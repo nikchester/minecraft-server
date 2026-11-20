@@ -29,3 +29,9 @@ files as Paper's `server.properties`; production deployment provisions them from
 the GitHub `production` environment. `scripts/ensure-authme-config.sh` and
 `scripts/ensure-dynamiclights-config.sh` remain as idempotent safeguards for
 project-specific settings after installation.
+
+Geyser-Spigot and Floodgate are pinned in `minecraft/versions.yml`. Geyser's
+committed configuration sets `auth-type: floodgate` and listens on port
+`19132` with NetherNet transport; the Ansible firewall role opens both TCP and
+UDP. With AuthMe still enabled, Bedrock players use the same registration/login
+flow as other offline-mode accounts.
