@@ -4,10 +4,10 @@ Plugin JAR files are not committed. Versions are declared in `../versions.yml` a
 
 Required plugins for v1:
 
-- AuthMeReloaded — its committed `config.yml` keeps `settings.restrictions.timeout: 60` and `settings.restrictions.maxRegPerIp: 0`; release preparation renders it into persistent plugin data, and `scripts/ensure-authme-config.sh` also checks these settings on deploy ticks.
+- AuthMeReloaded — the pinned 6.x Paper build downloads its libraries (database drivers, HikariCP, ConfigMe) from Maven Central on first start. Its committed `config.yml` keeps `settings.restrictions.loginTimeout: 60`, `settings.restrictions.registerTimeout: 60` (6.x split the old `settings.restrictions.timeout`), `settings.restrictions.maxRegPerIp: 0` and `settings.perPlayerLocale: false` (Russian messages for every player); release preparation renders it into persistent plugin data, and `scripts/ensure-authme-config.sh` also checks these settings on deploy ticks. The 6.x graphical login/register dialogs (`settings.registration.dialog.preJoin.enable`, `postJoin.enable`) are disabled, so players keep using `/login` and `/register` in chat.
 - CoreProtect
 - SkinsRestorer — players can use `/skin set <licensed-account-name>` to copy a Minecraft account's skin; `/skin clear` restores their account skin. Its first start generates the plugin's default configuration in persistent plugin data. See the [SkinsRestorer player guide](https://skinsrestorer.net/docs/features/change-skin).
-- Onlysleep — the pinned 1.4.2 build skips the night once 50% of eligible players in that world are sleeping (rounded up). Its settings and Russian player-facing messages are committed under `Onlysleep/`; the shared bStats config opts out of metrics.
+- Onlysleep — the pinned 1.4.4 build skips the night once 50% of eligible players in that world are sleeping (rounded up). Its settings and Russian player-facing messages are committed under `Onlysleep/`; the shared bStats config opts out of metrics.
 
 Optional administrative plugin:
 
@@ -20,3 +20,7 @@ Optional gameplay plugin:
 Optional communication plugin (issue #20):
 
 - DiscordSRV — its committed `config.yml` and `voice.yml` pin the chat channel and proximity voice settings; release preparation renders `DISCORD_BOT_TOKEN` from the environment or `/etc/minecraft/secrets/discord_bot_token` (`../../docs/SECRETS.md`). The config is based on the pinned 1.30.5 upstream defaults. Local live testing confirmed bot login, chat relay, and two-player proximity voice. See `../../docs/LOCAL_PLUGIN_TESTING.md` for the test setup and production configuration details.
+
+Bedrock cross-play:
+
+- Geyser-Spigot and Floodgate allow Bedrock clients to join the Java server. Geyser's committed config sets `auth-type: floodgate` and listens on port `19132` with NetherNet transport; Bedrock clients connect to `minecraft.nikchester.ru:19132`. The production firewall allows this port over both TCP and UDP. AuthMe remains enabled, so Bedrock players use the server's AuthMe registration/login flow.

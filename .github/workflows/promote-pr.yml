@@ -1,0 +1,45 @@
+name: Промоут dev → main
+
+# Держит открытым PR dev → main, пока в dev есть коммиты, которых нет в main.
+# Ничего не мерджит: слияние делает человек.
+# Нужна настройка репозитория: Settings → Actions → General → Workflow permissions →
+# «Allow GitHub Actions to create and approve pull requests».
+# PR от GITHUB_TOKEN не запускает ci.yml (он бежит на pull_request), поэтому скрипт
+# сразу после создания PR запускает ci.yml через workflow_dispatch на dev: так у PR
+# появляются обязательные проверки validate, secret-scan, integration.
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: promote-dev-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  # gh workflow run ci.yml (см. PROMOTE_CI_WORKFLOW)
+  actions: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          # Полная история всех веток: скрипту нужны origin/main и origin/dev.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Открыть или обновить PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          # CONTRIBUTING.md: промоут-PR не попадают в release notes.
+          PROMOTE_LABEL: skip-changelog
+          PROMOTE_CI_WORKFLOW: ci.yml
+        run: bash .github/scripts/promote-pr.sh

@@ -18,8 +18,8 @@ DiscordSRV in a throwaway Docker container so you can provide a test bot,
 connect a client, and verify AuthMe messages, Discord chat, and proximity
 voice. The AuthMe welcome text is copied from
 `minecraft/plugins/AuthMe/welcome.txt` into the image. It does not touch
-`systemd` or the production VPS. CI runs `bash test/local/run-all.sh` on pull requests and
-pushes to `main`/`dev`; that job starts every configured plugin without a bot
+`systemd` or the production VPS. CI runs `bash test/local/run-all.sh` on pull requests only;
+that job starts every configured plugin without a bot
 token and does not connect to Discord.
 
 ## Requirements
@@ -151,7 +151,7 @@ in this directory: nothing here is copied into a production release.
 
 ### Onlysleep (issue #48)
 
-Onlysleep 1.4.2 is pinned in `minecraft/versions.yml`; the real Paper/plugin
+Onlysleep 1.4.4 is pinned in `minecraft/versions.yml`; the real Paper/plugin
 smoke test verifies its JAR metadata, that Paper enables it, and that the
 committed 50% per-world threshold, Russian player messages, disabled update
 checks, and bStats opt-out are present in the runtime configuration. A release

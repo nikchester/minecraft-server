@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # GitHub Actions закреплены по тегу (checkout@v4/@v6 и т. д.).
+  # Плагины и Paper из minecraft/versions.yml Dependabot не поддерживает: их проверяет deps-audit.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3

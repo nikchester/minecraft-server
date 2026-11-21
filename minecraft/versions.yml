@@ -1,29 +1,29 @@
 minecraft:
-  version: "26.2"
+  version: "26.3"
 paper:
-  build: 124
-  download_url: "https://fill-data.papermc.io/v1/objects/274bbcb9807ad79a479617ce695a7c0686e652a8d1cabfd0e288d92a3ea29593/paper-26.2-124.jar"
+  build: 253
+  download_url: "https://fill-data.papermc.io/v1/objects/f9df8e19f4bdee97dbded48095391ea69c64342a4e19624db4f5e0d0136dfe0b/paper-26.3-253.jar"
 java:
   major: 25
 plugins:
   authme_reloaded:
-    version: "5.6.0"
+    version: "6.0.1"
     required: true
     source: "manual"
     data_dir: "AuthMe"
-    download_url: "https://github.com/AuthMe/AuthMeReloaded/releases/download/5.6.0/AuthMe-5.6.0.jar"
+    download_url: "https://github.com/AuthMe/AuthMeReloaded/releases/download/6.0.1/AuthMe-6.0.1-Paper.jar"
   coreprotect:
-    version: "22.4"
+    version: "24.1"
     required: true
     source: "manual"
     data_dir: "CoreProtect"
-    download_url: "https://cdn.modrinth.com/data/Lu3KuzdV/versions/llmrc4cl/CoreProtect-22.4.jar"
+    download_url: "https://cdn.modrinth.com/data/Lu3KuzdV/versions/3sehX6Sg/CoreProtect-CE-24.1.jar"
   chunky:
-    version: "1.4.40"
+    version: "1.5.66"
     required: false
     source: "manual"
     data_dir: "Chunky"
-    download_url: "https://cdn.modrinth.com/data/fALzjamp/versions/P3y2MXnd/Chunky-Bukkit-1.4.40.jar"
+    download_url: "https://cdn.modrinth.com/data/fALzjamp/versions/RBuKjN4k/Chunky-Paper-1.5.66.jar"
   dynamiclights:
     version: "0.1.1"
     required: false
@@ -37,11 +37,23 @@ plugins:
     data_dir: "DiscordSRV"
     download_url: "https://github.com/DiscordSRV/DiscordSRV/releases/download/v1.30.5/DiscordSRV-Build-1.30.5.jar"
   onlysleep:
-    version: "1.4.2"
+    version: "1.4.4"
     required: true
     source: "modrinth"
     data_dir: "Onlysleep"
-    download_url: "https://cdn.modrinth.com/data/Tr6srgFS/versions/X6Y39iU9/Onlysleep-1.4.2.jar"
+    download_url: "https://cdn.modrinth.com/data/Tr6srgFS/versions/GKMpoJjK/Onlysleep-1.4.4.jar"
+  geyser:
+    version: "2.12.1-build.1306"
+    required: true
+    source: "geysermc"
+    data_dir: "Geyser-Spigot"
+    download_url: "https://download.geysermc.org/v2/projects/geyser/versions/2.12.1/builds/1306/downloads/spigot"
+  floodgate:
+    version: "2.2.5-build.141"
+    required: true
+    source: "geysermc"
+    data_dir: "Floodgate"
+    download_url: "https://download.geysermc.org/v2/projects/floodgate/versions/2.2.5/builds/141/downloads/spigot"
   skinsrestorer:
     version: "15.12.6"
     required: true
@@ -51,8 +63,9 @@ plugins:
 shared_plugin_data_dirs:
   - "bStats"
 notes:
-  production_gate: "Paper artifact URL was provided by the owner and should be used for smoke tests and release preparation."
-  plugin_gate: "Plugin download URLs were resolved from the projects' own release APIs (GitHub for AuthMe/SkinsRestorer, Modrinth for CoreProtect/Chunky/DynamicLights) at the exact pinned versions above; verify before bumping versions."
+  production_gate: "Paper artifact URL (Fill API, STABLE build) was approved by the owner; use it for smoke tests and release preparation."
+  plugin_gate: "Plugin download URLs were resolved from the projects' own release APIs (GitHub for AuthMe/SkinsRestorer, Modrinth for CoreProtect/Chunky/DynamicLights, GeyserMC for Geyser/Floodgate) at the exact pinned versions above; verify before bumping versions."
+  bedrock_crossplay: "Geyser-Spigot and Floodgate are pinned from GeyserMC's release API at the exact versions above. Bedrock joins on TCP/UDP 19132; Geyser auth-type must be floodgate."
   dynamiclights_config: "DynamicLights' own config.yml (in shared/plugins/DynamicLights, not committed) must keep track_mobs: false so held light sources on mobs don't emit dynamic light; scripts/ensure-dynamiclights-config.sh self-heals this on every deploy cycle."
-  authme_config: "AuthMe's own config.yml (in shared/plugins/AuthMe, not committed) must keep settings.restrictions.timeout: 60 and settings.restrictions.maxRegPerIp: 0 (issue #13); scripts/ensure-authme-config.sh self-heals both on every deploy cycle."
-  onlysleep_config: "Onlysleep 1.4.2 (issue #48) skips a night at 50% of eligible players per world, rounded up; player-facing messages are Russian, bStats and update checks are disabled. The shared bStats config directory is separately linked because bStats is global to the server, not an installable plugin."
+  authme_config: "AuthMe 6.x ships per-platform builds; the pinned Paper build downloads its libraries from Maven Central on first start. Its config.yml (rendered from Git into shared/plugins/AuthMe) must keep settings.restrictions.loginTimeout and registerTimeout at 60 (6.x split of the old timeout), maxRegPerIp: 0 (issue #13) and settings.perPlayerLocale: false; scripts/ensure-authme-config.sh self-heals them on every deploy cycle. Login dialogs stay disabled in Git (issue #76)."
+  onlysleep_config: "Onlysleep 1.4.4 (issue #48) skips a night at 50% of eligible players per world, rounded up; player-facing messages are Russian, bStats and update checks are disabled. The shared bStats config directory is separately linked because bStats is global to the server, not an installable plugin."

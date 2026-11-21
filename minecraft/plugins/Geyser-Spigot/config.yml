@@ -1,0 +1,6 @@
+# Minimal overrides; Geyser fills the remaining settings from its version defaults.
+bedrock:
+  port: 19132
+  transport: nethernet
+java:
+  auth-type: floodgate

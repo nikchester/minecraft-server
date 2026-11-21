@@ -48,10 +48,13 @@ bash test/local/run-fast.sh
 ```
 
 The full test pass downloads the pinned Paper/plugin JARs and verifies that
-Paper starts and enables every configured plugin, including DiscordSRV. The
-smoke bootstraps DiscordSRV's complete defaults, leaves the bot token blank,
-and does not connect to Discord or any production service. To run just the
-Paper/plugin startup stage:
+Paper starts and enables every configured plugin, including DiscordSRV. For
+AuthMe it also requires AuthMe's own "successfully enabled" line and checks
+that the tuned timeouts, Russian messages and disabled login dialogs survive
+AuthMe re-saving its `config.yml` on startup. The smoke bootstraps
+DiscordSRV's complete defaults, leaves the bot token blank, and does not
+connect to Discord or any production service. To run just the Paper/plugin
+startup stage:
 
 ```bash
 docker compose --env-file .env -f test/local/docker-compose.yml --profile plugins run --build --rm paper-plugin-smoke
