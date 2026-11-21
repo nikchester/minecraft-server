@@ -24,7 +24,10 @@ jobs:
         run: shellcheck -x -e SC1091 scripts/*.sh
       - name: Ansible syntax
         working-directory: ansible
-        run: ansible-playbook -i inventory/production/hosts.example.yml playbooks/bootstrap.yml --syntax-check
+        run: |
+          for playbook in playbooks/*.yml; do
+            ansible-playbook -i inventory/production/hosts.example.yml "$playbook" --syntax-check
+          done
       - name: Ansible lint
         working-directory: ansible
         run: ansible-lint .
