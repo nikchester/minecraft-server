@@ -47,6 +47,33 @@ Cloud. Google expires refresh tokens of **Testing** clients after 7 days, which
 stopped production backups on 2026-11-04 (issue #80). To re-issue the token, follow
 "Google Drive OAuth Token Expired Or Revoked" in `docs/BACKUP_RESTORE.md`.
 
+### Promote PR GitHub App
+
+`.github/workflows/promote-pr.yml` opens the `dev` → `main` PR. GitHub runs CI
+on PRs authored by `github-actions[bot]` (`GITHUB_TOKEN`) only after a person
+approves every run, so the workflow creates the PR with a GitHub App token
+instead. CI then starts on `pull_request` and satisfies the `protect-main`
+required checks without approval.
+
+| Name | Kind | Purpose |
+|------|------|---------|
+| `PROMOTE_APP_CLIENT_ID` | repository variable | Client ID of the GitHub App. |
+| `PROMOTE_APP_PRIVATE_KEY` | repository secret | Private key (`.pem`) of the same App. |
+
+One-time setup:
+
+1. Create an App at https://github.com/settings/apps/new: any name, any
+   homepage URL, uncheck Webhook "Active". Repository permissions:
+   Contents — Read-only, Pull requests — Read and write. "Only on this account".
+2. On the App page, note the Client ID and generate a private key.
+3. Install the App ("Install App") on `nikchester/minecraft-server` only.
+4. Settings → Secrets and variables → Actions: add the variable and the secret
+   above.
+5. Run "Промоут dev → main" from the Actions tab. An open promote PR authored
+   by `github-actions[bot]` is closed and recreated by the App.
+
+Without the variable the workflow falls back to `GITHUB_TOKEN` with a warning.
+
 ## Runtime Secret Files
 
 Automation renders runtime secret files under `/etc/minecraft/secrets/` with restrictive permissions. Files under that directory must never be copied into the repository.

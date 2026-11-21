@@ -3,10 +3,9 @@
 # Запускается из .github/workflows/promote-pr.yml. Ничего не мерджит.
 # Нужны: git-клон с origin/main и origin/dev, gh с GH_TOKEN и GH_REPO.
 # Необязательно (задаются в promote-pr.yml):
-#   PROMOTE_LABEL        метка нового PR (например, skip-changelog);
-#   PROMOTE_CI_WORKFLOW  workflow с триггером workflow_dispatch: запускается на $head
-#                        только сразу после создания PR, потому что PR от GITHUB_TOKEN
-#                        не порождает событие pull_request и CI сам не стартует.
+#   PROMOTE_LABEL    метка нового PR (например, skip-changelog);
+#   PROMOTE_VIA_APP  true, если GH_TOKEN выдан GitHub App: тогда открытый PR от
+#                    github-actions[bot] закрывается и создаётся заново от App.
 set -euo pipefail
 
 base=main
@@ -49,8 +48,16 @@ trap 'rm -f "$body"' EXIT
 } > "$body"
 
 title="Промоут: dev → main (коммитов: $count)"
-existing=$(gh pr list --base "$base" --head "$head" --state open --json number --jq '.[0].number // empty')
-if [ -n "$existing" ]; then
+open_pr=$(gh pr list --base "$base" --head "$head" --state open \
+  --json number,author --jq '.[0] // empty | "\(.number) \(.author.login)"')
+read -r existing author <<< "$open_pr"
+if [ -n "$existing" ] && [ "${PROMOTE_VIA_APP:-}" = true ] && [ "$author" = "app/github-actions" ]; then
+  # CI такого PR ждёт ручного одобрения при каждом push в dev. Пересоздаём его от App.
+  gh pr close "$existing" --comment "Пересоздаётся от имени GitHub App: CI этого PR требует ручного одобрения."
+  echo "Закрыт PR #$existing от github-actions[bot]"
+  existing=
+fi
+if [ -n "${existing:-}" ]; then
   gh pr edit "$existing" --title "$title" --body-file "$body"
   echo "Обновлён PR #$existing: $title"
 else
@@ -60,10 +67,4 @@ else
   fi
   gh pr create "${create_args[@]}"
   echo "Создан PR: $title"
-  if [ -n "${PROMOTE_CI_WORKFLOW:-}" ]; then
-    # Исключение GitHub: GITHUB_TOKEN может запустить workflow_dispatch.
-    # При обновлении PR не запускаем: новые коммиты в dev дают событие synchronize.
-    gh workflow run "$PROMOTE_CI_WORKFLOW" --ref "$head"
-    echo "Запущен $PROMOTE_CI_WORKFLOW на $head"
-  fi
 fi
