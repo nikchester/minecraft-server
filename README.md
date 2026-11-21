@@ -9,7 +9,7 @@ The project intentionally keeps runtime operations simple: one Debian 13 VPS, Pa
 The server is live and deployed at `minecraft.nikchester.ru:25565`. The full pipeline (provision → deploy → backup → verify) has run end-to-end successfully on production:
 
 - Paper (pinned build, see `minecraft/versions.yml`) running under `minecraft.service`, AuthMeReloaded and CoreProtect loaded.
-- RCON bound locally but not exposed (only 22/tcp and 25565/tcp are open in the firewall).
+- RCON bound locally but not exposed (the firewall opens only 22/tcp, 25565/tcp and Bedrock 19132/tcp+udp).
 - As of 2026-10-28, production restic backups use Google Drive; a snapshot in the new repository is verified. Old Yandex snapshots are preserved separately, not migrated. The legacy production secret `YANDEX_RCLONE_CONFIG` now holds the sole Google remote; deploy validates it before SSH. See `docs/BACKUP_RESTORE.md` and `docs/SECRETS.md`.
 - Telegram and Healthchecks.io alerts confirmed delivering (not just non-error exits), including a direct Telegram alert on a failed backup, not only a Healthchecks.io ping (#6, closed).
 - Old release directories under `/srv/minecraft/releases` are pruned after every successful deploy, keeping the newest 5 and always protecting `current-release`/`previous-release` (#7, closed).
@@ -47,7 +47,7 @@ Already done for the current VPS (see Status above); kept here as the procedure 
 2. Point `minecraft.nikchester.ru` to the VPS IP.
 3. Add required GitHub Secrets and configure the `production` environment (`docs/SECRETS.md`).
 4. Fill `ansible/inventory/production/hosts.yml` from `ansible/inventory/production/hosts.example.yml`.
-5. Run Ansible bootstrap (`gh workflow run provision.yml`).
+5. Run Ansible bootstrap (`gh workflow run provision.yml -f playbook=bootstrap`).
 6. Run a deploy (`gh workflow run deploy.yml`) and verify Paper, AuthMe, CoreProtect, backups, and monitoring per the Status checklist above.
 
 See `docs/OPERATIONS.md` and `docs/DISASTER_RECOVERY.md` for detailed commands.

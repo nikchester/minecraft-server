@@ -42,6 +42,16 @@ When a release contains changes from multiple categories, use the highest applic
 
 Release notes should distinguish player-visible changes from operational work. Use sections such as **For players** and **Reliability and infrastructure**; include CI, Ansible, backup, deployment, and documentation changes in the latter when useful, even if there is nothing to report in the player section. Keep internal implementation detail concise and describe its practical effect where possible.
 
+## Firewall Changes
+
+The firewall is managed only by the Ansible `firewall` role; do not change `ufw` rules by hand on the VPS. The deploy workflow does not apply firewall changes. After the change is merged to `main`, apply it with the `Provision VPS` workflow and approve the `production` environment:
+
+```bash
+gh workflow run provision.yml -f playbook=firewall
+```
+
+`playbook=firewall` runs `ansible/playbooks/firewall.yml` only and prints `ufw status verbose` at the end. `playbook=bootstrap` configures the whole host (including SSH hardening and `server.properties`) and is meant for re-provisioning.
+
 ## Force Deploy
 
 Use force deploy only for owner-approved emergencies. It may bypass player waiting, but still requires a successful pre-deploy backup and health verification.

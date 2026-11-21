@@ -2,6 +2,14 @@ name: Provision VPS
 
 on:
   workflow_dispatch:
+    inputs:
+      playbook:
+        description: Ansible playbook to apply (firewall changes only ufw; bootstrap configures the whole host)
+        type: choice
+        options:
+          - firewall
+          - bootstrap
+        default: firewall
 
 jobs:
   provision:
@@ -45,10 +53,13 @@ jobs:
         run: |
           ssh -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/deploy_key \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" true
-      - name: Run Ansible bootstrap
+      - name: Run Ansible ${{ inputs.playbook }}
         working-directory: ansible
-        run: ansible-playbook --private-key ~/.ssh/deploy_key playbooks/bootstrap.yml
+        env:
+          PLAYBOOK: ${{ inputs.playbook }}
+        run: ansible-playbook --private-key ~/.ssh/deploy_key "playbooks/${PLAYBOOK}.yml"
       - name: Upload repository snapshot
+        if: inputs.playbook == 'bootstrap'
         run: |
           tar --exclude='.git' --exclude='.opencode' -czf /tmp/minecraft-infra.tgz .
           scp -i ~/.ssh/deploy_key /tmp/minecraft-infra.tgz "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/minecraft-infra.tgz"

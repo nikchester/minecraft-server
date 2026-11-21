@@ -1,0 +1,10 @@
+---
+# Applies only the firewall role, so a port change can reach production
+# without re-running bootstrap (SSH hardening, server.properties, timers).
+- name: Apply Minecraft host firewall
+  hosts: minecraft_servers
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+  roles:
+    - firewall
