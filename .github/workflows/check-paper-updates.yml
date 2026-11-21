@@ -47,7 +47,7 @@ jobs:
           PY
       - name: Create pull request
         if: steps.paper.outputs.update == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: automation/paper-build-update
           title: Update Paper build to ${{ steps.paper.outputs.latest }}
