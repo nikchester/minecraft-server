@@ -11,6 +11,7 @@ REQUIRED = [
     "minecraft/versions.yml",
     "minecraft/server.properties",
     "ansible/playbooks/bootstrap.yml",
+    "ansible/playbooks/firewall.yml",
     "scripts/backup.sh",
     "scripts/deploy.sh",
     "scripts/restore.sh",

@@ -1,28 +1,48 @@
 ---
 - name: Allow SSH
-  ansible.builtin.command: ufw allow 22/tcp
-  changed_when: false
+  community.general.ufw:
+    rule: allow
+    port: '22'
+    proto: tcp
 
 - name: Allow Minecraft
-  ansible.builtin.command: ufw allow {{ minecraft_server_port }}/tcp
-  changed_when: false
+  community.general.ufw:
+    rule: allow
+    port: '{{ minecraft_server_port }}'
+    proto: tcp
 
-- name: Allow Bedrock discovery
-  ansible.builtin.command: ufw allow 19132/tcp
-  changed_when: false
+# Geyser's NetherNet transport needs TCP for signaling and UDP for gameplay.
+- name: Allow Bedrock signaling
+  community.general.ufw:
+    rule: allow
+    port: '{{ minecraft_bedrock_port }}'
+    proto: tcp
 
 - name: Allow Bedrock gameplay
-  ansible.builtin.command: ufw allow 19132/udp
-  changed_when: false
+  community.general.ufw:
+    rule: allow
+    port: '{{ minecraft_bedrock_port }}'
+    proto: udp
 
 - name: Deny incoming by default
-  ansible.builtin.command: ufw default deny incoming
-  changed_when: false
+  community.general.ufw:
+    default: deny
+    direction: incoming
 
 - name: Allow outgoing by default
-  ansible.builtin.command: ufw default allow outgoing
-  changed_when: false
+  community.general.ufw:
+    default: allow
+    direction: outgoing
 
 - name: Enable firewall
-  ansible.builtin.command: ufw --force enable
+  community.general.ufw:
+    state: enabled
+
+- name: Read firewall status
+  ansible.builtin.command: ufw status verbose
+  register: firewall_status
   changed_when: false
+
+- name: Show firewall status
+  ansible.builtin.debug:
+    var: firewall_status.stdout_lines

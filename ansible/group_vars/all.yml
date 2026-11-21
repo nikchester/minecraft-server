@@ -7,6 +7,8 @@ minecraft_config_dir: /etc/minecraft
 minecraft_secret_dir: /etc/minecraft/secrets
 minecraft_rcon_port: 25575
 minecraft_server_port: 25565
+# Must match bedrock.port in minecraft/plugins/Geyser-Spigot/config.yml.
+minecraft_bedrock_port: 19132
 minecraft_java_xms: 2G
 minecraft_java_xmx: 3G
 minecraft_java_major: 25
