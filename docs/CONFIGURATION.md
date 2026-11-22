@@ -33,6 +33,7 @@ project-specific settings after installation.
 Geyser-Spigot and Floodgate are pinned in `minecraft/versions.yml`. Geyser's
 committed configuration sets `auth-type: floodgate` and listens on port
 `19132` with NetherNet transport; the Ansible firewall role opens both TCP and
-UDP. Deploy does not touch the firewall; apply firewall changes with the
+UDP. Signaling advertises `minecraft.nikchester.ru:19132` to Bedrock clients,
+because STUN on the VPS sees outbound UDP remapped to other ports. Deploy does not touch the firewall; apply firewall changes with the
 `Provision VPS` workflow (`docs/OPERATIONS.md`). With AuthMe still enabled, Bedrock players use the same registration/login
 flow as other offline-mode accounts.
