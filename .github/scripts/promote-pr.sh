@@ -3,9 +3,7 @@
 # Запускается из .github/workflows/promote-pr.yml. Ничего не мерджит.
 # Нужны: git-клон с origin/main и origin/dev, gh с GH_TOKEN и GH_REPO.
 # Необязательно (задаются в promote-pr.yml):
-#   PROMOTE_LABEL    метка нового PR (например, skip-changelog);
-#   PROMOTE_VIA_APP  true, если GH_TOKEN выдан GitHub App: тогда открытый PR от
-#                    github-actions[bot] закрывается и создаётся заново от App.
+#   PROMOTE_LABEL  метка нового PR (например, skip-changelog).
 set -euo pipefail
 
 base=main
@@ -48,16 +46,8 @@ trap 'rm -f "$body"' EXIT
 } > "$body"
 
 title="Промоут: dev → main (коммитов: $count)"
-open_pr=$(gh pr list --base "$base" --head "$head" --state open \
-  --json number,author --jq '.[0] // empty | "\(.number) \(.author.login)"')
-read -r existing author <<< "$open_pr"
-if [ -n "$existing" ] && [ "${PROMOTE_VIA_APP:-}" = true ] && [ "$author" = "app/github-actions" ]; then
-  # CI такого PR ждёт ручного одобрения при каждом push в dev. Пересоздаём его от App.
-  gh pr close "$existing" --comment "Пересоздаётся от имени GitHub App: CI этого PR требует ручного одобрения."
-  echo "Закрыт PR #$existing от github-actions[bot]"
-  existing=
-fi
-if [ -n "${existing:-}" ]; then
+existing=$(gh pr list --base "$base" --head "$head" --state open --json number --jq '.[0].number // empty')
+if [ -n "$existing" ]; then
   gh pr edit "$existing" --title "$title" --body-file "$body"
   echo "Обновлён PR #$existing: $title"
 else

@@ -2,12 +2,10 @@ name: Промоут dev → main
 
 # Держит открытым PR dev → main, пока в dev есть коммиты, которых нет в main.
 # Ничего не мерджит: слияние делает человек.
-# PR создаётся от имени GitHub App (docs/SECRETS.md, «Promote PR GitHub App»):
-# CI на pull_request стартует сам и засчитывается ruleset protect-main.
-# PR от GITHUB_TOKEN (автор github-actions[bot]) GitHub запускает только после
-# ручного одобрения каждого запуска, поэтому без App это лишь запасной путь.
-# Для запасного пути нужна настройка репозитория: Settings → Actions → General →
-# Workflow permissions → «Allow GitHub Actions to create and approve pull requests».
+# Нужна настройка репозитория: Settings → Actions → General → Workflow permissions →
+# «Allow GitHub Actions to create and approve pull requests».
+# Обязательные проверки validate, secret-scan, integration у PR берутся из запуска
+# ci.yml на push в dev: head PR — dev, коммит тот же.
 on:
   push:
     branches: [dev]
@@ -34,27 +32,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Токен GitHub App
-        id: app-token
-        if: vars.PROMOTE_APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: ${{ vars.PROMOTE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.PROMOTE_APP_PRIVATE_KEY }}
-          permission-contents: read
-          permission-pull-requests: write
-
-      - name: Предупредить о запасном пути
-        if: steps.app-token.outcome != 'success'
-        run: >-
-          echo "::warning::PROMOTE_APP_CLIENT_ID не задан: PR создаётся от GITHUB_TOKEN,
-          его CI ждёт ручного одобрения. См. docs/SECRETS.md."
-
       - name: Открыть или обновить PR
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           # CONTRIBUTING.md: промоут-PR не попадают в release notes.
           PROMOTE_LABEL: skip-changelog
-          PROMOTE_VIA_APP: ${{ steps.app-token.outcome == 'success' }}
         run: bash .github/scripts/promote-pr.sh

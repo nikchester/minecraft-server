@@ -2,6 +2,11 @@ name: CI
 
 on:
   pull_request:
+  # Промоут-PR dev → main создаёт github-actions[bot]: его запуск по pull_request
+  # ждёт ручного одобрения. Head этого PR — dev, поэтому проверки с push в dev
+  # на том же коммите засчитываются ruleset protect-main.
+  push:
+    branches: [dev]
   workflow_dispatch:
 
 jobs:
