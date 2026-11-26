@@ -60,11 +60,17 @@ plugins:
     source: "manual"
     data_dir: "SkinsRestorer"
     download_url: "https://github.com/SkinsRestorer/SkinsRestorer/releases/download/15.12.6/SkinsRestorer.jar"
+  viaversion:
+    version: "5.12.3"
+    required: true
+    source: "manual"
+    data_dir: "ViaVersion"
+    download_url: "https://github.com/ViaVersion/ViaVersion/releases/download/5.12.3/ViaVersion-5.12.3.jar"
 shared_plugin_data_dirs:
   - "bStats"
 notes:
   production_gate: "Paper artifact URL (Fill API, STABLE build) was approved by the owner; use it for smoke tests and release preparation."
-  plugin_gate: "Plugin download URLs were resolved from the projects' own release APIs (GitHub for AuthMe/SkinsRestorer, Modrinth for CoreProtect/Chunky/DynamicLights, GeyserMC for Geyser/Floodgate) at the exact pinned versions above; verify before bumping versions."
+  plugin_gate: "Plugin download URLs were resolved from the projects' own release APIs (GitHub for AuthMe/SkinsRestorer/ViaVersion, Modrinth for CoreProtect/Chunky/DynamicLights, GeyserMC for Geyser/Floodgate) at the exact pinned versions above; verify before bumping versions."
   bedrock_crossplay: "Geyser-Spigot and Floodgate are pinned from GeyserMC's release API at the exact versions above. Bedrock joins on TCP/UDP 19132; Geyser auth-type must be floodgate."
   dynamiclights_config: "DynamicLights' own config.yml (in shared/plugins/DynamicLights, not committed) must keep track_mobs: false so held light sources on mobs don't emit dynamic light; scripts/ensure-dynamiclights-config.sh self-heals this on every deploy cycle."
   authme_config: "AuthMe 6.x ships per-platform builds; the pinned Paper build downloads its libraries from Maven Central on first start. Its config.yml (rendered from Git into shared/plugins/AuthMe) must keep settings.restrictions.loginTimeout and registerTimeout at 60 (6.x split of the old timeout), maxRegPerIp: 0 (issue #13) and settings.perPlayerLocale: false; scripts/ensure-authme-config.sh self-heals them on every deploy cycle. Login dialogs stay disabled in Git (issue #76)."
