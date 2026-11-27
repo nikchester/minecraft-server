@@ -19,6 +19,7 @@ Secrets are not committed to Git. Values are added manually by the owner to GitH
 | `DISCORD_BOT_TOKEN` | production environment | DiscordSRV bot token, rendered into `plugins/DiscordSRV/config.yml`'s `BotToken` on every deploy cycle (issue #20); the config is restricted to the Minecraft service account. |
 | `HEALTHCHECKS_VPS_URL` | production environment | Healthchecks.io heartbeat URL for VPS liveness. |
 | `HEALTHCHECKS_BACKUP_URL` | production environment | Healthchecks.io job URL for backup monitoring. |
+| `RATE_WATCHER_DISPATCH_TOKEN` | production environment | Fine-grained GitHub token of `nikchester` limited to `nikchester/rate-watcher` with **Actions: Read and write**. Used only by the `rate-watcher-trigger` playbook, which writes it to `/etc/minecraft/secrets/rate-watcher-dispatch.header` for the 09:00 digest timer. |
 
 Current project status: the owner reported that all required secrets have been added to the `production` environment.
 

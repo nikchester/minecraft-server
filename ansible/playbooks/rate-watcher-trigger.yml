@@ -1,0 +1,11 @@
+---
+# Applies only the rate-watcher trigger: a timer that asks GitHub to run the
+# rate-watcher daily digest at 09:00 Yerevan (GitHub's own schedule runs up to
+# 11 hours late). Touches nothing else on the host.
+- name: Apply rate-watcher digest trigger
+  hosts: minecraft_servers
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+  roles:
+    - rate_watcher_trigger

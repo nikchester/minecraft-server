@@ -1,0 +1,15 @@
+[Unit]
+Description=Ask GitHub to run the rate-watcher daily digest
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# 204 = accepted. Retries cover short network or GitHub outages.
+ExecStart=/usr/bin/curl -fsS --retry 5 --retry-all-errors --retry-delay 30 --max-time 30 \
+  -X POST \
+  -H @/etc/minecraft/secrets/rate-watcher-dispatch.header \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  -d "{\"ref\":\"dev\"}" \
+  https://api.github.com/repos/nikchester/rate-watcher/actions/workflows/daily-digest.yml/dispatches

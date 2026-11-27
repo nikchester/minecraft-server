@@ -1,0 +1,57 @@
+---
+# The token comes from the RATE_WATCHER_DISPATCH_TOKEN secret via the
+# environment of the Provision VPS workflow; it is never logged.
+- name: Require dispatch token
+  ansible.builtin.assert:
+    that: rate_watcher_trigger_token | length > 0
+    fail_msg: RATE_WATCHER_DISPATCH_TOKEN is empty
+    quiet: true
+  no_log: true
+
+- name: Create secret directory
+  ansible.builtin.file:
+    path: '{{ minecraft_secret_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+# curl reads the header from this file, so the token never shows up in ps.
+- name: Write dispatch auth header
+  ansible.builtin.copy:
+    content: "Authorization: Bearer {{ rate_watcher_trigger_token }}\n"
+    dest: '{{ minecraft_secret_dir }}/rate-watcher-dispatch.header'
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Install trigger units
+  ansible.builtin.copy:
+    src: '{{ item }}'
+    dest: '/etc/systemd/system/{{ item }}'
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - rate-watcher-digest.service
+    - rate-watcher-digest.timer
+  notify: Reload systemd
+
+- name: Apply systemd changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable trigger timer
+  ansible.builtin.systemd:
+    name: rate-watcher-digest.timer
+    enabled: true
+    state: started
+
+- name: Read next trigger time  # noqa: command-instead-of-module
+  ansible.builtin.command: systemctl list-timers rate-watcher-digest.timer --no-pager
+  register: rate_watcher_trigger_timer
+  changed_when: false
+
+- name: Show next trigger time
+  ansible.builtin.debug:
+    var: rate_watcher_trigger_timer.stdout_lines
