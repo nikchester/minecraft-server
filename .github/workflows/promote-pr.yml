@@ -4,9 +4,8 @@ name: Промоут dev → main
 # Ничего не мерджит: слияние делает человек.
 # Нужна настройка репозитория: Settings → Actions → General → Workflow permissions →
 # «Allow GitHub Actions to create and approve pull requests».
-# PR от GITHUB_TOKEN не запускает ci.yml (он бежит на pull_request), поэтому скрипт
-# сразу после создания PR запускает ci.yml через workflow_dispatch на dev: так у PR
-# появляются обязательные проверки validate, secret-scan, integration.
+# Обязательные проверки validate, secret-scan, integration у PR берутся из запуска
+# ci.yml на push в dev: head PR — dev, коммит тот же.
 on:
   push:
     branches: [dev]
@@ -19,8 +18,6 @@ concurrency:
 permissions:
   contents: read
   pull-requests: write
-  # gh workflow run ci.yml (см. PROMOTE_CI_WORKFLOW)
-  actions: write
 
 jobs:
   promote:
@@ -41,5 +38,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           # CONTRIBUTING.md: промоут-PR не попадают в release notes.
           PROMOTE_LABEL: skip-changelog
-          PROMOTE_CI_WORKFLOW: ci.yml
         run: bash .github/scripts/promote-pr.sh
