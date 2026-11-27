@@ -2,5 +2,10 @@
 bedrock:
   port: 19132
   transport: nethernet
+  signaling:
+    # The VPS's outbound UDP is NATed to other ports, so STUN-discovered
+    # addresses are unreachable; advertise the public endpoint instead.
+    advertise-addresses:
+      - "minecraft.nikchester.ru:19132"
 java:
   auth-type: floodgate
