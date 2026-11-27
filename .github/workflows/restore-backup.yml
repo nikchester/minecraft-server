@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install SSH key
         env:
           DEPLOY_KEY: ${{ secrets.VPS_SSH_KEY }}
