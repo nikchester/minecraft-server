@@ -3,10 +3,7 @@
 # Запускается из .github/workflows/promote-pr.yml. Ничего не мерджит.
 # Нужны: git-клон с origin/main и origin/dev, gh с GH_TOKEN и GH_REPO.
 # Необязательно (задаются в promote-pr.yml):
-#   PROMOTE_LABEL        метка нового PR (например, skip-changelog);
-#   PROMOTE_CI_WORKFLOW  workflow с триггером workflow_dispatch: запускается на $head
-#                        только сразу после создания PR, потому что PR от GITHUB_TOKEN
-#                        не порождает событие pull_request и CI сам не стартует.
+#   PROMOTE_LABEL  метка нового PR (например, skip-changelog).
 set -euo pipefail
 
 base=main
@@ -60,10 +57,4 @@ else
   fi
   gh pr create "${create_args[@]}"
   echo "Создан PR: $title"
-  if [ -n "${PROMOTE_CI_WORKFLOW:-}" ]; then
-    # Исключение GitHub: GITHUB_TOKEN может запустить workflow_dispatch.
-    # При обновлении PR не запускаем: новые коммиты в dev дают событие synchronize.
-    gh workflow run "$PROMOTE_CI_WORKFLOW" --ref "$head"
-    echo "Запущен $PROMOTE_CI_WORKFLOW на $head"
-  fi
 fi

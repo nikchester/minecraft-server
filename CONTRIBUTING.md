@@ -8,10 +8,10 @@
    change branch into `dev` only after local tests pass.
 3. Wait for all required CI checks on the pull request to pass. A formal GitHub
    review approval is not required; the repository owner merges the pull request
-   after the checks pass. CI runs once for the pull request and is not repeated
-   just because the pull request was merged.
-4. After the change is merged into `dev`, open a promotion pull request from
-   `dev` into `main`. Wait for its required CI checks to pass, then the
+   after the checks pass.
+4. After the change is merged into `dev`, the promotion pull request from
+   `dev` into `main` is opened or updated automatically. Wait for its required
+   CI checks to pass, then the
    repository owner merges it. The merge into `main` starts the production
    deployment automatically. Do not merge pull requests or trigger production
    deployments on the owner's behalf.
@@ -54,9 +54,12 @@ protocol stub. It does not replace the full Paper/plugin startup check.
 ## CI behavior
 
 GitHub Actions runs static validation, secret scanning, and the same complete
-integration command (`bash test/local/run-all.sh`) for pull requests. Branch
-protection requires `validate`, `secret-scan`, and `integration` to pass before
-merge. CI does not run a duplicate set of checks after a merge. Merging into
+integration command (`bash test/local/run-all.sh`) for pull requests and for
+pushes to `dev`. Branch protection requires `validate`, `secret-scan`, and
+`integration` to pass before merge. The promotion pull request is created by
+`github-actions[bot]`, and GitHub waits for manual approval before running its
+`pull_request` CI; its head is `dev`, so the checks from the `dev` push on the
+same commit satisfy branch protection instead. Merging into
 `main` triggers the production deployment workflow directly; that merge is
 allowed only after the pull request's required checks pass. The integration job
 has no production credentials and does not connect to Discord or other
