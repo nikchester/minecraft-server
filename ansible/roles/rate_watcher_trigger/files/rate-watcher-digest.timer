@@ -1,0 +1,12 @@
+[Unit]
+Description=Start the rate-watcher daily digest at 09:00 Yerevan
+
+[Timer]
+OnCalendar=*-*-* 09:00:00 Asia/Yerevan
+AccuracySec=1min
+# No catch-up after downtime: GitHub's own schedule in daily-digest.yml is the
+# fallback and skips the run if the digest was already sent that day.
+Persistent=false
+
+[Install]
+WantedBy=timers.target

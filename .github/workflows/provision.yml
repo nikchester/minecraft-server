@@ -4,10 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       playbook:
-        description: Ansible playbook to apply (firewall changes only ufw; bootstrap configures the whole host)
+        description: >-
+          Ansible playbook to apply (firewall changes only ufw; rate-watcher-trigger only the
+          09:00 digest timer; bootstrap configures the whole host)
         type: choice
         options:
           - firewall
+          - rate-watcher-trigger
           - bootstrap
         default: firewall
 
@@ -57,6 +60,7 @@ jobs:
         working-directory: ansible
         env:
           PLAYBOOK: ${{ inputs.playbook }}
+          RATE_WATCHER_DISPATCH_TOKEN: ${{ secrets.RATE_WATCHER_DISPATCH_TOKEN }}
         run: ansible-playbook --private-key ~/.ssh/deploy_key "playbooks/${PLAYBOOK}.yml"
       - name: Upload repository snapshot
         if: inputs.playbook == 'bootstrap'

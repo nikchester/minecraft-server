@@ -52,6 +52,18 @@ gh workflow run provision.yml -f playbook=firewall
 
 `playbook=firewall` runs `ansible/playbooks/firewall.yml` only and prints `ufw status verbose` at the end. `playbook=bootstrap` configures the whole host (including SSH hardening and `server.properties`) and is meant for re-provisioning.
 
+## Rate-Watcher Digest Timer
+
+The VPS also starts the daily currency digest of `nikchester/rate-watcher` at 09:00 Yerevan: GitHub's `schedule` trigger ran it up to 11 hours late. The `rate-watcher-digest.timer` unit calls the `workflow_dispatch` API of `daily-digest.yml`; the GitHub schedule stays as a fallback and skips the run when the digest was already sent that day. Missed 09:00 runs are not caught up after downtime.
+
+Add `RATE_WATCHER_DISPATCH_TOKEN` to the `production` environment (see `docs/SECRETS.md`), then, after the change is merged to `main`:
+
+```bash
+gh workflow run provision.yml -f playbook=rate-watcher-trigger
+```
+
+The playbook touches only the token file and the two `rate-watcher-digest` units and prints the next run time. `bootstrap` does not include it. To rotate the token, update the secret and run the playbook again.
+
 ## Force Deploy
 
 Use force deploy only for owner-approved emergencies. It may bypass player waiting, but still requires a successful pre-deploy backup and health verification.

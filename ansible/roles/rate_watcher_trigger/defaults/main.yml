@@ -1,0 +1,2 @@
+---
+rate_watcher_trigger_token: "{{ lookup('ansible.builtin.env', 'RATE_WATCHER_DISPATCH_TOKEN') }}"
